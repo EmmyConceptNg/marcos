@@ -1,0 +1,10 @@
+export default function ElectricuteIcon (){
+    return (
+        <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="4" y="4" width="48" height="48" rx="24" fill="#FFF7EB"/>
+<rect x="4" y="4" width="48" height="48" rx="24" stroke="#FFFCF5" stroke-width="8"/>
+<path d="M29 18L20.0934 28.6879C19.7446 29.1064 19.5702 29.3157 19.5676 29.4925C19.5652 29.6461 19.6337 29.7923 19.7532 29.8889C19.8907 30 20.1632 30 20.708 30H28L27 38L35.9065 27.3121C36.2553 26.8936 36.4297 26.6843 36.4324 26.5075C36.4347 26.3539 36.3663 26.2077 36.2467 26.1111C36.1092 26 35.8368 26 35.292 26H28L29 18Z" stroke="#FF9D43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
+    )
+}

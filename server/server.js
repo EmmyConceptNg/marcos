@@ -11,7 +11,7 @@ import plaidController from "./routes/Plaid.js";
 
 
 /* CONFIGURATION */
-dotenv.config();
+
 const app = express();
 app.use(express.json());
 app.use(helmet());
@@ -19,6 +19,11 @@ app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(morgan("dev"));
 app.use(cors());
 app.use(bodyParser.json());
+
+const envFile =
+  process.env.NODE_ENV === "production" ? ".env.production" : ".env.local";
+
+  dotenv.config({ path: envFile });
 
 /* ROUTES */
 app.use('/api/auth', userRoutes)

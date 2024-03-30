@@ -4,6 +4,7 @@ import Text from "../../components/Text";
 import Profile from "./Profile";
 import Preferences from "./Preferences";
 import Security from "./Security";
+import { Subscription } from "./Subscription";
 
 export default function Settings() {
   const [value, setValue] = useState(0);
@@ -22,6 +23,8 @@ export default function Settings() {
       <Tabs
         value={value}
         onChange={handleChange}
+        variant="scrollable" // Set the variant to scrollable
+        scrollButtons="auto" // Automatically show scroll buttons when necessary
         aria-label="settings tabs"
         TabIndicatorProps={{
           sx: {
@@ -39,6 +42,8 @@ export default function Settings() {
           { label: "Edit Profile" },
           { label: "Preferences" },
           { label: "Security" },
+          { label: "Notifications" },
+          { label: "My Subscriptions" },
         ].map((item, index) => (
           <SettingsTab key={index} label={item.label} />
         ))}
@@ -56,6 +61,16 @@ export default function Settings() {
       {value === 2 && (
         <TabPanel index={2}>
           <Security />
+        </TabPanel>
+      )}
+      {value === 3 && (
+        <TabPanel index={3}>
+          <Subscription />
+        </TabPanel>
+      )}
+      {value === 4 && (
+        <TabPanel index={4}>
+          <Subscription />
         </TabPanel>
       )}
     </Box>

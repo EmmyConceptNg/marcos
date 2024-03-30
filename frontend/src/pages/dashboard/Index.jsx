@@ -39,13 +39,29 @@ function Overview() {
   const [linkToken, setLinkToken] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [itemId, setItemId] = useState(null);
+  const [proPlan, setProPlan] = useState(null);
 
   const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+
+  const getPlans = () => {
+    axios.get("/api/subscription/get-plans").then((response) => {
+      const plans = response.data;
+      console.log(plans)
+      setProPlan(plans.find((plan) => plan.name === "Pro"));
+      console.log(proPlan)
+    });
+  };
+
+  useEffect(() => {
+    getPlans();
+  }, []);
+
+   
 
   const handleUpgrade = () => {
     setIsUpgrading(true);
     axios
-      .post("/api/subscription/initialize", { plan: "Pro" })
+      .post("/api/subscription/initialize", { planId: proPlan?._id })
       .then(async (response) => {
         setIsUpgrading(true);
         const stripe = await stripePromise;
@@ -70,7 +86,7 @@ function Overview() {
     const fetchLinkToken = async () => {
       try {
         const response = await axios.post("/api/plaid/create_link_token", {
-          userId: user._id,
+          userId: user?._id,
         });
         setLinkToken(response.data.link_token);
       } catch (error) {
@@ -79,7 +95,7 @@ function Overview() {
     };
 
     fetchLinkToken();
-  }, [user._id]);
+  }, [user?._id]);
 
   const fetchAccounts = () => {};
   const onSuccess = useCallback(
@@ -114,13 +130,17 @@ function Overview() {
   
 
   const { open, ready, error } = usePlaidLink(config);
+
+   
+
+  
   return (
     <>
       <Text color="#131C30" fs="36px" fw="700">
         Hi Marcos!
       </Text>
    
-        <Box
+       {proPlan && user?.subscriptionPlan.name === 'Basic' && <Box
           height={{ md: "199px" }}
           sx={{
             backgroundImage: `url('/assets/images/bg-dash.svg')`,
@@ -163,7 +183,7 @@ function Overview() {
               </Text>
             </Stack>
           ))}
-        </Box>
+        </Box>}
     
       <Box
         sx={{

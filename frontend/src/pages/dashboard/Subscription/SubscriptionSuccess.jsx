@@ -19,11 +19,25 @@ export default function SubscriptionSuccess() {
   const user = useSelector((state) => state.user.details);
   const { planId, sessionId } = useParams();
   const [redirection, setRedirection] = useState(true);
+  const [plan, setPlan] = useState(null);
+  
+  useEffect(() => {
+    getPlans();
+  }, []);
+
   useEffect(() => {
     setRedirection(true);
     redirect();
   }, []);
 
+   
+
+   const getPlans = () => {
+     axios.get("/api/subscription/get-plans").then((response) => {
+       const plans = response.data;
+       setPlan(plans.find((plan) => plan._id === planId));
+     });
+   };
   const redirect = () => {
     setRedirection(true);
     axios
@@ -34,10 +48,18 @@ export default function SubscriptionSuccess() {
       })
       .then((response) => {
         dispatch(setUser(response.data.user))
-        navigate("/dashboard");
+        if(plan?.name === 'Basic' || plan?.name === 'Pro'){
+          navigate("/dashboard/app");
+        }else if (plan?.name === "Enterprise") {
+          navigate("/business/app");
+        }else{
+           setRedirection(false);
+          return false
+        }
       })
-      .catch(() => {
+      .catch((error) => {
         notify("error redirecting please proceed to dashbaord", "error");
+        console.log(error)
         setRedirection(false);
       });
   };

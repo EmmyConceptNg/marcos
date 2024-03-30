@@ -27,6 +27,7 @@ export default function Home(){
 
          <About />
          <Functions />
+         
          <Pricing />
          <Reviews />
          <Links  />

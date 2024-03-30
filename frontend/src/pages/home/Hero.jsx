@@ -87,7 +87,7 @@ export default function Hero() {
                   }}
                   rounded
                   width="165px"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/signup")}
                   variant="contained"
                   size="large"
                 >
@@ -106,7 +106,7 @@ export default function Hero() {
                   color="#333333"
                   width="180px"
                   rounded
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/signup")}
                   variant="outlined"
                   size="large"
                 >

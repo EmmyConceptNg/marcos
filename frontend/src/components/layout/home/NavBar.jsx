@@ -1,10 +1,23 @@
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-scroll";
-import { Stack, Box } from "@mui/material";
+import { Stack, Box, Popover } from "@mui/material";
 import PropTypes from "prop-types";
 import Button from "../../Button";
+import { ArrowDownward, KeyboardArrowDown } from "@mui/icons-material";
+import { useState } from "react";
+import ProductComponent from "./ProductComponent";
 
 export default function NavBar({ ffor = "" }) {
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
   const navigate = useNavigate();
   return (
     <>
@@ -29,14 +42,18 @@ export default function NavBar({ ffor = "" }) {
             },
             {
               to: "#",
+              dropdown: true,
+              component: "",
               name: "Products",
             },
             {
               to: "#",
+              dropdown: true,
+              component: "",
               name: "Resources",
             },
             {
-              to: "testimonials",
+              to: "pricing",
               name: "Pricing",
             },
           ].map((nav, index) => (
@@ -50,7 +67,45 @@ export default function NavBar({ ffor = "" }) {
               duration={500}
               key={index}
             >
-              {nav?.name}
+              {nav.dropdown ? (
+                <>
+                  <Box
+                    style={{
+                      color: "#475467",
+                      cursor: "pointer",
+                    }}
+                    onClick={handleClick}
+                    display="flex"
+                  >
+                    {nav.name}
+                    <KeyboardArrowDown />
+                  </Box>
+                  <Popover
+                    open={Boolean(anchorEl)}
+                    anchorEl={anchorEl}
+                    onClose={handleClose} elevation={1}
+                    sx={{
+                      boxShadow: "0px 18px 34.900001525878906px 0px #00000040",
+                      borderRadius: "24px",
+                    }}
+                    anchorOrigin={{
+                      vertical: "bottom",
+                      horizontal: "left",
+                    }}
+                    transformOrigin={{
+                      vertical: "top",
+                      horizontal: "left",
+                    }}
+                  >
+                    <ProductComponent />
+                  </Popover>
+                </>
+              ) : (
+                <Box display="flex">
+                  {nav?.name}
+                  {nav?.dropdown && <KeyboardArrowDown />}
+                </Box>
+              )}
             </Link>
           ))}
         </Stack>
@@ -76,7 +131,6 @@ export default function NavBar({ ffor = "" }) {
             to="/login"
             color="#475467"
             sx={{
-              
               backgroundPosition: "center",
             }}
           >

@@ -59,7 +59,7 @@ export const createSubscription = async (req, res) => {
         planEndDate: new Date(subscription.current_period_end * 1000),
       },
       { new: true, lean: true } // Return the updated document as a plain object
-    );
+    ).populate('subscriptionPlan');
 
     res.status(201).json({ subscription: savedSubscription, user });
   } catch (error) {
@@ -74,11 +74,11 @@ export const initializeSubscription = async (req, res) => {
   const domain = process.env.APP_URL;
 
   // Find the plan in your database
-  const plan = await Plan.findOne({ name: req.body.plan });
+  const plan = await Plan.findOne({ _id: req.body.planId });
   if (!plan) {
     return res
       .status(404)
-      .json({ message: `Plan named ${req.body.plan} not found` });
+      .json({ message: `Plan  not found` });
   }
 
   const successUrl = `${domain}/dashboard/subscription/success/{CHECKOUT_SESSION_ID}/${plan._id}`;
@@ -105,6 +105,7 @@ export const initializeSubscription = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 export const createSubscriptionPlan = async (req, res) => {
   const stripe = stripePackage(process.env.STRIPE_SECRET_KEY);
   const { productName, productDescription, productPrice, currency } = req.body;
@@ -144,4 +145,17 @@ export const createSubscriptionPlan = async (req, res) => {
       .status(500)
       .json({ message: "Failed to create subscription plan:", err });
   }
+};
+
+
+export const getSubscriptionPlans = (req, res) => {
+  Plan.find({})
+    .sort({ createdAt: -1 })
+    .then((plans) => {
+      res.status(200).json(plans);
+    })
+    .catch((err) => {
+      console.error("Error fetching plans:", err);
+      res.status(500).json({ error: "Internal server error" });
+    });
 };

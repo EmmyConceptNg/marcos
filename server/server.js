@@ -18,7 +18,7 @@ app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(morgan("dev"));
 app.use(cors());
-app.use(bodyParser.json());
+// app.use(bodyParser.json());
 
 const envFile =
   process.env.NODE_ENV === "production" ? ".env.production" : ".env.local";

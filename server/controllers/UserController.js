@@ -35,6 +35,7 @@ export const login = async (req, res) => {
       expiresIn: "1h",
     }
   );
+  delete user.password; 
 
   res
     .cookie("access_token", token, {
@@ -44,6 +45,47 @@ export const login = async (req, res) => {
     .json({
       user,
     });
+};
+export const loginGoogle = async (req, res) => {
+  try {
+    const signdetails = req.body;
+    const user = await User.findOne({ email: signdetails.email })
+      .populate("subscriptionPlan")
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ error: "Email not found" });
+    }
+
+    if (!user.emailVerified) {
+      return res.status(401).json({ error: "Email not verified" });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      },
+      process.env.JWTSECRET,
+      { expiresIn: "1h" }
+    );
+
+    
+    delete user.password; 
+
+    res
+      .cookie("access_token", token, {
+        httpOnly: true,
+        sameSite: "lax", // or 'strict' depending on your requirements
+        secure: process.env.NODE_ENV === "production", // Set secure to true if in production (uses HTTPS)
+      })
+      .status(200)
+      .json({ user });
+  } catch (error) {
+    console.error("Error during Google login:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 export const register = async (req, res) => {

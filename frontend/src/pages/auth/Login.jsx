@@ -1,19 +1,4 @@
-import {
-  Box,
-  Divider,
-  FormControl,
-  Grid,
-  IconButton,
-  InputAdornment,
-  InputLabel,
-  OutlinedInput,
-  Stack,
-  TextField,
-} from "@mui/material";
-import { Link, useLocation } from "react-router-dom";
-
-import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { LoadingButton } from "@mui/lab";
+import { Box, Grid, Stack } from "@mui/material";
 
 import { useNavigate } from "react-router-dom";
 
@@ -21,7 +6,7 @@ import { useDispatch } from "react-redux";
 
 import { ToastContainer } from "react-toastify";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "../../api/axios";
 import Text from "../../components/Text";
 import { notify } from "../../utils/Index";
@@ -30,47 +15,110 @@ import Button from "../../components/Button";
 import { setUser } from "../../redux/UserReducer";
 import { Form, Formik } from "formik";
 import { loginValidation } from "../../utils/validation";
+import { useGoogleLogin } from "@react-oauth/google";
+import { Icon } from "@iconify/react";
 
 export default function Login() {
   // const location = useLocation();
   // const queryParams = new URLSearchParams(location.search);
   // const workspaceEmail = queryParams.get("email") ?? "";
-  
-  
-    const initialValues = {
-      email: "",
-      password: "",
-    };
-    const dispatch = useDispatch();
 
-  
+  const initialValues = {
+    email: "",
+    password: "",
+  };
+  const dispatch = useDispatch();
+
   const navigate = useNavigate();
 
+  const handleLogin = (values, actions) => {
+    actions.setSubmitting(true);
 
-   const handleLogin = (values, actions) => {
-     actions.setSubmitting(true);
+    axios
+      .post("/api/auth/login", values, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then((response) => {
+        console.log(response.data.user);
+        dispatch(setUser(response.data.user));
 
-     axios
-       .post("/api/auth/login", values, {
-         headers: { "Content-Type": "application/json" },
-       })
-       .then((response) => {
-         console.log(response.data.user);
-         dispatch(setUser(response.data.user));
+        if (response.data.user.emailVerified === false) {
+          navigate("/verification/link/email");
+        } else {
+          navigate("/dashboard");
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+        notify(error?.response?.data?.error, "error");
+      })
+      .finally(() => actions.setSubmitting(false));
+  };
 
-         if (response.data.user.emailVerified === false) {
-           navigate("/verification/link/email");
-         } else {
-           navigate("/dashboard");
-         }
-       })
-       .catch((error) => {
-         console.log(error);
-         notify(error?.response?.data?.error, "error");
-       })
-       .finally(() => actions.setSubmitting(false));
-   };
-  
+  const handleLoginGoogle = (values, actions) => {
+    actions.setSubmitting(true);
+
+    axios
+      .post("/api/auth/login/google", values, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then((response) => {
+        console.log(response.data.user);
+        dispatch(setUser(response.data.user));
+        if (response.data.user.subscriptionPlan.name === "Enterprise") {
+          navigate("/business");
+        } else {
+          navigate("/dashboard");
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+        notify(error?.response?.data?.error, "error");
+      })
+      .finally(() => actions.setSubmitting(false));
+  };
+
+  const [googleUser, setGoogleUser] = useState([]);
+
+  const signUpWithGoogle = useGoogleLogin({
+    onSuccess: (codeResponse) => {
+      setGoogleUser(codeResponse);
+      console.log(codeResponse);
+    },
+    onError: (error) => console.log("Login Failed:", error),
+  });
+
+  useEffect(() => {
+    if (googleUser && googleUser.access_token) {
+      // Ensure there's an access token
+      axios
+        .get(
+          `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleUser.access_token}`,
+          {
+            headers: {
+              Authorization: `Bearer ${googleUser.access_token}`,
+            },
+          }
+        )
+        .then((res) => {
+          const actions = {
+            setSubmitting: (isSubmitting) => {
+              /* handle submission state */
+            },
+          };
+          handleLoginGoogle(
+            {
+              email: res.data.email,
+              emailVerified: res.data.verified_email,
+            },
+            actions
+          );
+        })
+        .catch((err) => {
+          console.error("Error fetching Google user info:", err.message);
+        });
+    }
+  }, [googleUser]);
 
   return (
     <Box bgcolor="#fff" maxHeight="100vh">
@@ -131,20 +179,16 @@ export default function Login() {
               </Formik>
 
               <Box>
-                <Box
-                  borderRadius="10px"
+                <Button
+                  onClick={signUpWithGoogle}
                   width="100%"
                   height="44px"
-                  border="1px solid #D9D9D9"
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
+                  variant="outlined"
+                  color="#344054"
+                  startIcon={<Icon icon="devicon:google" />}
                 >
-                  <Box component="img" src="assets/icons/google.svg" />
-                  <Text fw="550" fs="16px" sx={{ ml: 2 }} color="#344054">
-                    Sign up with Google
-                  </Text>
-                </Box>
+                  Sign in with Google
+                </Button>
               </Box>
               <Box display="flex" justifyContent={"space-between"}>
                 <Box display="flex">

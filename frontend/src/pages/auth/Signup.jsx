@@ -21,6 +21,10 @@ import Button from "../../components/Button";
 import { setUser } from "../../redux/UserReducer";
 import { Formik, Form } from "formik";
 import { userValidation } from "../../utils/validation";
+import { Icon } from "@iconify/react";
+import { useEffect, useState } from "react";
+import { useGoogleLogin } from "@react-oauth/google";
+
 
 
 export default function Signup() {
@@ -58,6 +62,49 @@ export default function Signup() {
       .finally(() => actions.setSubmitting(false));
   };
 
+  const [googelUser, setGoogleUser] = useState([]);
+  
+
+  
+    const signUpWithGoogle = useGoogleLogin({
+      onSuccess: (codeResponse) => setGoogleUser(codeResponse),
+      onError: (error) => console.log("Login Failed:", error),
+    });
+
+    useEffect(() => {
+      if (googelUser && googelUser.access_token) {
+        // Ensure there's an access token
+        axios
+          .get(
+            `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googelUser.access_token}`,
+            {
+              headers: {
+                Authorization: `Bearer ${googelUser.access_token}`,
+              },
+            }
+          )
+          .then((res) => {
+            const actions = {
+              setSubmitting: (isSubmitting) => {
+                /* handle submission state */
+              },
+            };
+            handleSignup(
+              {
+                fullName: res.data.name,
+                email: res.data.email,
+                image: res.data.picture,
+                emailVerified: res.data.verified_email,
+              },
+              actions
+            );
+          })
+          .catch((err) => {
+            console.error("Error fetching Google user info:", err.message);
+          });
+      }
+    }, [googelUser]);
+  
 
   return (
     <Box bgcolor="#fff" maxHeight="100vh">
@@ -93,13 +140,15 @@ export default function Signup() {
                         label="Name"
                         required
                         placeholder="Enter you name"
-                        aria-label="enter your name" name="fullName"
+                        aria-label="enter your name"
+                        name="fullName"
                       />
                       <Input
                         label="Email"
                         required
                         placeholder="Enter you email"
-                        aria-label="enter your email" name="email"
+                        aria-label="enter your email"
+                        name="email"
                       />
                       <Input
                         label="Password"
@@ -126,20 +175,16 @@ export default function Signup() {
               </Formik>
 
               <Box>
-                <Box
-                  borderRadius="10px"
+                <Button
+                  onClick={signUpWithGoogle}
                   width="100%"
                   height="44px"
-                  border="1px solid #D9D9D9"
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
+                  variant="outlined"
+                  color="#344054"
+                  startIcon={<Icon icon="devicon:google" />}
                 >
-                  <Box component="img" src="assets/icons/google.svg" />
-                  <Text fw="550" fs="16px" sx={{ ml: 2 }} color="#344054">
-                    Sign up with Google
-                  </Text>
-                </Box>
+                  Sign up with Google
+                </Button>
               </Box>
               <Box display="flex" justifyContent={"center"}>
                 <Text

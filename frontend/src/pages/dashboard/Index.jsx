@@ -184,38 +184,6 @@ function Overview() {
             </Stack>
           ))}
         </Box>}
-    
-      <Box
-        sx={{
-          backgroundImage: `url('/assets/images/bg-dash.svg')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          borderRadius: "15px",
-          padding: { md: 3, xs: 1 },
-        }}
-      >
-        <Stack
-          direction={{ sm: "row", xs: "column" }}
-          mb={2}
-          spacing={1}
-          justifyContent="space-between"
-        >
-          <Text color="#131C30" fs={{ sm: "25px", xs: "18px" }} fw="700">
-            Connect Your Bank!
-          </Text>
-
-          <Button
-            variant="contained"
-            width={{ sm: "165px", xs: "100%" }}
-            height="48px"
-            onClick={() => ready && open()}
-            disabled={!ready}
-          >
-            Connect Bank
-          </Button>
-        </Stack>
-      </Box>
     </>
   );
 }

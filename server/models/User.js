@@ -39,6 +39,7 @@ const schema = new mongoose.Schema(
     },
     plaidAccessToken: String,
     plaidItemId: String,
+    image: String,
   },
   { timestamps: true }
 );

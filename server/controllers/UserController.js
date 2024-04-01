@@ -196,7 +196,7 @@ export const updateUser = async (req, res) =>{
       { _id: userId },
       { $set: req.body },
       { new: true }
-    ).then((user) =>
+    ).populate('subscriptionPlan').then((user) =>
       res.status(200).json({ user, message: "User Updated Successfully" })
     );
   } catch (error) {
@@ -205,6 +205,27 @@ export const updateUser = async (req, res) =>{
 }
 
 
+export const updateImage = async(req, res) =>{
+  const {userId} = req.params
+   try {
+    User.findByIdAndUpdate(
+      { _id: userId },
+      {
+        image:
+          process.env.SERVER_URL +
+          "/images/" +
+          req.file.filename.replace(/\\/g, "/"),
+      },
+      { new: true }
+    )
+      .populate("subscriptionPlan")
+      .then((user) => {
+        res.status(200).json({ user });
+      });
+   } catch (error) {
+     res.status(400).json(error.message);
+   }
+}
 
 const html = (user) =>{
   return ` <center>
@@ -314,3 +335,5 @@ const html = (user) =>{
  </center>
 `;
 }
+
+

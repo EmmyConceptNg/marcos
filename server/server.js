@@ -8,6 +8,9 @@ import morgan from "morgan";
 import userRoutes from "./routes/User.js";
 import subscriptionRoutes from "./routes/Subscription.js";
 import plaidController from "./routes/Plaid.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
 
 
 /* CONFIGURATION */
@@ -18,7 +21,9 @@ app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(morgan("dev"));
 app.use(cors());
-// app.use(bodyParser.json());
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 const envFile =
   process.env.NODE_ENV === "production" ? ".env.production" : ".env.local";
@@ -26,6 +31,7 @@ const envFile =
   dotenv.config({ path: envFile });
 
 /* ROUTES */
+app.use("/images", express.static(path.join(__dirname, "public/images")));
 app.use('/api/auth', userRoutes)
 app.use('/api/subscription', subscriptionRoutes)
 app.use('/api/plaid', plaidController)

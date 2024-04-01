@@ -19,7 +19,7 @@ export default function Nav(){
     const handleClick = (event) => {
       setAnchorEl(event.currentTarget);
     };
-    const user = useSelector((state) => state.user);
+    const user = useSelector((state) => state.user.details);
     const handleClose = () => {
       setAnchorEl(null);
     };
@@ -50,15 +50,8 @@ export default function Nav(){
               >
                 <Avatar
                   onClick={handleClick}
-                  alt={user.fullName}
                   sx={{ width: "40px", height: "40px" }}
-                  // src={
-                  //   user.image
-                  //     ? getImageUrl(user?.image)
-                  //     : "/assets/images/avatar.svg"
-                  // }
-                  src={ "/assets/images/avatar.svg"
-                  }
+                  src={user?.image ?? null}
                 />
               </IconButton>
             </Box>

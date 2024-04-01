@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from "react-redux";
 import axios from "../../api/axios";
 import { setUser } from "../../redux/UserReducer";
 import { notify } from "../../utils/Index";
+import { ToastContainer } from "react-toastify";
 
 export default function Profile() {
 
@@ -36,32 +37,32 @@ const fileInputRef = useRef(null);
   const handleFileChange = async (event) => {
     const selectedFile = event.target.files[0];
 
-    // if (!selectedFile) {
-    //   notify("Please select a file first!", "error");
-    //   return false;
-    // }
+    if (!selectedFile) {
+      notify("Please select a file first!", "error");
+      return false;
+    }
 
-    // const formData = new FormData();
-    // formData.append("profileImage", selectedFile);
+    const formData = new FormData();
+    formData.append("image", selectedFile);
 
-    // try {
-    //   axios
-    //     .post(`/api/user/${user?._id}/update-profile-image`, formData, {
-    //       headers: {
-    //         "Content-Type": "multipart/form-data",
-    //       },
-    //     })
-    //     .then((response) => {
-    //       notify(response.data.message, "success");
-    //       dispatch({ type: "SET_USER", payload: response.data.user });
+    try {
+      axios
+        .post(`/api/auth/update-profile-image/${user?._id}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        })
+        .then((response) => {
+          notify(response.data.message, "success");
+          dispatch(setUser(response.data.user));
 
-    //       setImage(response.data.filePath);
-    //     });
-    // } catch (error) {
-    //   console.log("Error uploading image:", error);
+          
+        });
+    } catch (error) {
+      console.log("Error uploading image:", error);
 
-    //   notify(error.response?.data.error, "error");
-    // }
+      notify(error.response?.data.error, "error");
+    }
   };
 
 
@@ -88,6 +89,7 @@ const fileInputRef = useRef(null);
 
   return (
     <Box mt={3}>
+      <ToastContainer />
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={{ md: 2, xs: 3 }}
@@ -96,7 +98,7 @@ const fileInputRef = useRef(null);
         <Box display="flex" alignItems="flex-end">
           <Avatar
             sx={{ width: "130px", height: "130px" }}
-            src="/assets/images/avatar.svg"
+            src={user?.image || null}
           />
           <Box
             sx={{

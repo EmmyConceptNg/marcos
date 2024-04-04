@@ -36,9 +36,9 @@ export default function Input({
   required = true, isPin=false,
   id,
   label,
-  value,
+  
   placeholder, onInput, inputProp,
-  onChange,
+  
   name, height="44px",
   width, type="text", endAdornment,  details,
   sx,
@@ -46,13 +46,20 @@ export default function Input({
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleClickShowPassword = (field) => {
+    setShowPassword((prevShowPassword) => ({
+      ...prevShowPassword,
+      [field]: !prevShowPassword[field],
+    }));
+  };
 
   const handleMouseDownPassword = (event) => {
     event.preventDefault();
   };
 
    const [field, meta] = useField(name);
+    const isPasswordField = type === "password";
+    const inputType = isPasswordField && showPassword[name] ? "text" : type;
 
   return (
     <FormControl fullWidth sx={{ height }}>
@@ -67,35 +74,30 @@ export default function Input({
         </label>
       )}
       <InputField
-        {...field} onInput={onInput} inputProp={inputProp}
+        {...field}
+        onInput={onInput}
+        inputProp={inputProp}
         height={height}
-        type={
-          endAdornment && showPassword
-            ? "text"
-            : endAdornment && !showPassword
-              ? "password"
-              : type
-        }
+        type={inputType}
         fullWidth
         sx={{ width, ...sx }}
         name={name}
-        // onChange={onChange}
         required={required}
         id={id}
         isPin={isPin}
         endAdornment={
-          endAdornment && (
+          isPasswordField ? (
             <InputAdornment position="end">
               <IconButton
-                aria-label="toggle password visibility"
-                onClick={handleClickShowPassword}
+                aria-label={`toggle ${name} visibility`}
+                onClick={() => handleClickShowPassword(name)}
                 onMouseDown={handleMouseDownPassword}
                 edge="end"
               >
-                {showPassword ? <VisibilityOff /> : <Visibility />}
+                {showPassword[name] ? <VisibilityOff /> : <Visibility />}
               </IconButton>
             </InputAdornment>
-          )
+          ) : null
         }
         // value={value}
         placeholder={placeholder}
@@ -119,7 +121,6 @@ Input.propTypes = {
   isPin: PropTypes.bool,
   id: PropTypes.string,
   label: PropTypes.string,
-  value: PropTypes.string,
   placeholder: PropTypes.string,
   name: PropTypes.string,
   width: PropTypes.string,
@@ -127,6 +128,5 @@ Input.propTypes = {
   type: PropTypes.string,
   endAdornment: PropTypes.element,
   details: PropTypes.string,
-  onChange: PropTypes.func,
   sx: PropTypes.object,
 };

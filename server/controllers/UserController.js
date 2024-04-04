@@ -61,6 +61,7 @@ export const loginGoogle = async (req, res) => {
       return res.status(401).json({ error: "Email not verified" });
     }
 
+
     const token = jwt.sign(
       {
         id: user._id,
@@ -70,7 +71,6 @@ export const loginGoogle = async (req, res) => {
       process.env.JWTSECRET,
       { expiresIn: "1h" }
     );
-
     
     delete user.password; 
 
@@ -187,8 +187,6 @@ export const verifyMail = async (req, res) => {
   }
 };
 
-
-
 export const updateUser = async (req, res) =>{
   const {userId} = req.params;
   try {
@@ -199,6 +197,26 @@ export const updateUser = async (req, res) =>{
     ).populate('subscriptionPlan').then((user) =>
       res.status(200).json({ user, message: "User Updated Successfully" })
     );
+  } catch (error) {
+    res.status(500).json({error})
+  }
+}
+
+export const updatePassword = async (req, res) =>{
+  const {userId} = req.params;
+  const {password} = req.body;
+   const salt = bcrypt.genSaltSync(12);
+   const hashedPassword = bcrypt.hashSync(password, salt);
+  try {
+    User.findByIdAndUpdate(
+      { _id: userId },
+      { password: hashedPassword },
+      { new: true }
+    )
+      .populate("subscriptionPlan")
+      .then((user) =>
+        res.status(200).json({ user, message: "Password Updated Successfully" })
+      );
   } catch (error) {
     res.status(500).json({error})
   }
@@ -226,6 +244,48 @@ export const updateImage = async(req, res) =>{
      res.status(400).json(error.message);
    }
 }
+export const updateId = async (req, res) => {
+  const { userId } = req.params;
+  try {
+    User.findByIdAndUpdate(
+      { _id: userId },
+      {
+        id:
+          process.env.SERVER_URL +
+          "/images/" +
+          req.file.filename.replace(/\\/g, "/"),
+      },
+      { new: true }
+    )
+      .populate("subscriptionPlan")
+      .then((user) => {
+        res.status(200).json({ user });
+      });
+  } catch (error) {
+    res.status(400).json(error.message);
+  }
+};
+export const updateProofOfAddress = async (req, res) => {
+  const { userId } = req.params;
+  try {
+    User.findByIdAndUpdate(
+      { _id: userId },
+      {
+        proofOfAddress:
+          process.env.SERVER_URL +
+          "/images/" +
+          req.file.filename.replace(/\\/g, "/"),
+      },
+      { new: true }
+    )
+      .populate("subscriptionPlan")
+      .then((user) => {
+        res.status(200).json({ user });
+      });
+  } catch (error) {
+    res.status(400).json(error.message);
+  }
+};
 
 const html = (user) =>{
   return ` <center>

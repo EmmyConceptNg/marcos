@@ -15,6 +15,12 @@ import { useCallback, useEffect, useState } from "react";
 import { usePlaidLink } from "react-plaid-link";
 
 
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+
+
 export default function Dashboard() {
   return (
     <>
@@ -46,17 +52,15 @@ function Overview() {
   const getPlans = () => {
     axios.get("/api/subscription/get-plans").then((response) => {
       const plans = response.data;
-      console.log(plans)
+      console.log(plans);
       setProPlan(plans.find((plan) => plan.name === "Pro"));
-      console.log(proPlan)
+      console.log(proPlan);
     });
   };
 
   useEffect(() => {
     getPlans();
   }, []);
-
-   
 
   const handleUpgrade = () => {
     setIsUpgrading(true);
@@ -103,19 +107,19 @@ function Overview() {
       // Send the publicToken to your server to exchange for an access token
       try {
         const response = await axios.post("/api/plaid/exchange_public_token", {
-          publicToken, userId : user._id
+          publicToken,
+          userId: user._id,
         });
         setAccessToken(response.data.plaid.accessToken);
         setItemId(response.data.plaid.itemId);
-        dispatch(setUser(response.data.user))
-        navigate("/dashboard"); 
+        dispatch(setUser(response.data.user));
+        navigate("/dashboard");
 
-     
         fetchAccounts(response.data.accessToken);
       } catch (error) {
         console.error("Error exchanging public token: ", error);
         // Update the UI to show an error message
-        notify("Unable to connect to your bank. Please try again.", 'error');
+        notify("Unable to connect to your bank. Please try again.", "error");
       }
     },
     [navigate, fetchAccounts]
@@ -127,20 +131,52 @@ function Overview() {
     // Define other callbacks as needed
   };
 
-  
-
   const { open, ready, error } = usePlaidLink(config);
 
-   
-
-  
   return (
     <>
       <Text color="#131C30" fs="36px" fw="700">
         Hi Marcos!
       </Text>
-   
-       {proPlan && user?.subscriptionPlan.name === 'Basic' && <Box
+
+      {/* Update Profile */}
+      {!user?.ssn && (
+        <Box
+          sx={{
+            backgroundImage: `url('/assets/images/bg-dash.svg')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            borderRadius: "15px",
+            padding: { md: 3, xs: 1 },
+          }}
+        >
+          <Stack
+            direction={{ sm: "row", xs: "column" }}
+            mb={2}
+            spacing={1}
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Text color="#131C30" fs="18px" fw="700">
+              Update your profile info to access credit report
+            </Text>
+
+            <Button
+              variant="contained"
+              loading={isUpgrading}
+              width={{ sm: "165px", xs: "100%" }}
+              height="48px"
+              onClick={() => navigate("/dashboard/settings")}
+            >
+              Upgrade Profile
+            </Button>
+          </Stack>
+        </Box>
+      )}
+
+      {proPlan && user?.subscriptionPlan.name === "Basic" && (
+        <Box
           height={{ md: "199px" }}
           sx={{
             backgroundImage: `url('/assets/images/bg-dash.svg')`,
@@ -183,156 +219,290 @@ function Overview() {
               </Text>
             </Stack>
           ))}
-        </Box>}
+        </Box>
+      )}
     </>
   );
 }
 function Disputes() {
+  const [record, setRecord] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const user = useSelector((state) => state.user.details);
+   const [numPages, setNumPages] = useState(null);
+   const [pageNumber, setPageNumber] = useState(1);
+
+   useEffect(() => {
+     return () => {
+       if (uploadedFile) {
+         URL.revokeObjectURL(URL.createObjectURL(uploadedFile));
+       }
+     };
+   }, [uploadedFile]);
+
+  const handleUploadFromComputer = () => {
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".pdf,.html";
+
+    fileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      setUploadedFile(file);
+      if ( file) {
+        const fileType = file.type;
+        const validTypes = ["application/pdf", "text/html"];
+        if (validTypes.includes(fileType)) {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          await axios
+            .post(`/api/record/upload/${user?._id}`, formData, {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            })
+            .then((response) => {
+              notify(response.data.success, "success");
+              //  dispatch(setUser(response.data.user));
+            })
+            .catch((error) => {
+              notify(error.response?.data.error, "error");
+            });
+        } else {
+          alert("Only PDF and HTML files are allowed.");
+        }
+      }
+    };
+
+    fileInput.click();
+  };
+
+  const handleRemoveFile = () => {
+    setUploadedFile(null); // Reset the uploaded file state
+  };
+
+  function onDocumentLoadSuccess({ numPages }) {
+    setNumPages(numPages);
+    setPageNumber(1); // Set to first page
+  }
+
+
   return (
     <>
       <Text color="#131C30" fs="25px" fw="700">
         Disputes
       </Text>
-      <Box>
-        <Grid container spacing={3}>
-          {[
-            {
-              image: "/assets/images/trans.svg",
-              scheduled: 0,
-              sent: 0,
-              completed: 0,
-            },
-            {
-              image: "/assets/images/experian.svg",
-              scheduled: 0,
-              sent: 0,
-              completed: 0,
-            },
-            {
-              image: "/assets/images/equifax.svg",
-              scheduled: 0,
-              sent: 0,
-              completed: 0,
-            },
-          ].map((item, index) => {
-            return (
-              <Grid item key={index} md={4} sm={6} xs={12}>
-                <Box
-                  display="flex"
-                  flexDirection="column"
-                  justifyContent="space-between"
-                  height="205px"
-                  border="1px solid #ECECEC"
-                  p={2}
-                  bgcolor="#fff"
-                >
-                  <Box display="flex" justifyContent="center">
-                    <Box component="img" src={item.image} />
-                  </Box>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Icon
-                        icon="solar:calendar-broken"
-                        style={{ color: "#3C80E5" }}
-                      />
-                      <Text color="#131C30" fs="16px" fw="550">
-                        Scheduled
-                      </Text>
-                    </Stack>
-                    <Text color="#131C30" fs="16px" fw="550">
-                      {item.scheduled}
-                    </Text>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Icon
-                        icon="icon-park-solid:message-sent"
-                        style={{ color: "#34D073" }}
-                      />
-                      <Text color="#131C30" fs="16px" fw="550">
-                        Sent
-                      </Text>
-                    </Stack>
-                    <Text color="#131C30" fs="16px" fw="550">
-                      {item.sent}
-                    </Text>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Icon
-                        icon="carbon:task-complete"
-                        style={{ color: "#34D073" }}
-                      />
-                      <Text color="#131C30" fs="16px" fw="550">
-                        Sent
-                      </Text>
-                    </Stack>
-                    <Text color="#131C30" fs="16px" fw="550">
-                      {item.sent}
-                    </Text>
-                  </Stack>
-                </Box>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Box>
-      <Box>
-        <Grid container spacing={3}>
-          {[
-            {
-              image: "/assets/images/trans.svg",
-              updated: "Feb 28, 2024 ",
-            },
-            {
-              image: "/assets/images/experian.svg",
-              updated: "Feb 28, 2024 ",
-            },
-            {
-              image: "/assets/images/equifax.svg",
-              updated: "Feb 28, 2024 ",
-            },
-          ].map((item, index) => {
-            return (
-              <Grid item key={index} md={4} sm={6} xs={12}>
-                <Box
-                  display="flex"
-                  flexDirection="column"
-                  justifyContent="space-between"
-                  height="290px"
-                  border="1px solid #ECECEC"
-                  p={2}
-                  bgcolor="#fff"
-                >
-                  <Box display="flex" justifyContent="center">
-                    <Box component="img" src="/assets/images/meter.svg" />
-                  </Box>
-                  <Stack justifyContent="center" alignItems="center">
-                    <Box display="flex" justifyContent="center">
-                      <Box component="img" src={item.image} />
+      {record ? (
+        <Box>
+          <Box>
+            <Grid container spacing={3}>
+              {[
+                {
+                  image: "/assets/images/trans.svg",
+                  scheduled: 0,
+                  sent: 0,
+                  completed: 0,
+                },
+                {
+                  image: "/assets/images/experian.svg",
+                  scheduled: 0,
+                  sent: 0,
+                  completed: 0,
+                },
+                {
+                  image: "/assets/images/equifax.svg",
+                  scheduled: 0,
+                  sent: 0,
+                  completed: 0,
+                },
+              ].map((item, index) => {
+                return (
+                  <Grid item key={index} md={4} sm={6} xs={12}>
+                    <Box
+                      display="flex"
+                      flexDirection="column"
+                      justifyContent="space-between"
+                      height="205px"
+                      border="1px solid #ECECEC"
+                      p={2}
+                      bgcolor="#fff"
+                    >
+                      <Box display="flex" justifyContent="center">
+                        <Box component="img" src={item.image} />
+                      </Box>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Icon
+                            icon="solar:calendar-broken"
+                            style={{ color: "#3C80E5" }}
+                          />
+                          <Text color="#131C30" fs="16px" fw="550">
+                            Scheduled
+                          </Text>
+                        </Stack>
+                        <Text color="#131C30" fs="16px" fw="550">
+                          {item.scheduled}
+                        </Text>
+                      </Stack>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Icon
+                            icon="icon-park-solid:message-sent"
+                            style={{ color: "#34D073" }}
+                          />
+                          <Text color="#131C30" fs="16px" fw="550">
+                            Sent
+                          </Text>
+                        </Stack>
+                        <Text color="#131C30" fs="16px" fw="550">
+                          {item.sent}
+                        </Text>
+                      </Stack>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Icon
+                            icon="carbon:task-complete"
+                            style={{ color: "#34D073" }}
+                          />
+                          <Text color="#131C30" fs="16px" fw="550">
+                            Sent
+                          </Text>
+                        </Stack>
+                        <Text color="#131C30" fs="16px" fw="550">
+                          {item.sent}
+                        </Text>
+                      </Stack>
                     </Box>
-                    <Text color="#C7C7C7" fs="15px" fw="400">
-                      {`Last updated ${item.updated}`}
-                    </Text>
-                  </Stack>
-                </Box>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Box>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
+          <Box>
+            <Grid container spacing={3}>
+              {[
+                {
+                  image: "/assets/images/trans.svg",
+                  updated: "Feb 28, 2024 ",
+                },
+                {
+                  image: "/assets/images/experian.svg",
+                  updated: "Feb 28, 2024 ",
+                },
+                {
+                  image: "/assets/images/equifax.svg",
+                  updated: "Feb 28, 2024 ",
+                },
+              ].map((item, index) => {
+                return (
+                  <Grid item key={index} md={4} sm={6} xs={12}>
+                    <Box
+                      display="flex"
+                      flexDirection="column"
+                      justifyContent="space-between"
+                      height="290px"
+                      border="1px solid #ECECEC"
+                      p={2}
+                      bgcolor="#fff"
+                    >
+                      <Box display="flex" justifyContent="center">
+                        <Box component="img" src="/assets/images/meter.svg" />
+                      </Box>
+                      <Stack justifyContent="center" alignItems="center">
+                        <Box display="flex" justifyContent="center">
+                          <Box component="img" src={item.image} />
+                        </Box>
+                        <Text color="#C7C7C7" fs="15px" fw="400">
+                          {`Last updated ${item.updated}`}
+                        </Text>
+                      </Stack>
+                    </Box>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
+        </Box>
+      ) : (
+        <Box
+          sx={{ border: "3px dotted #CDCDCD" }}
+          height="200px"
+          borderRadius="15px"
+          display="flex"
+          justifyContent="center"
+        >
+          <Stack spacing={2} justifyContent="center" alignItems="center">
+            <Text color="#131C30" fs={{ sm: "16px", xs: "16px" }} fw="400">
+              You currently do not have any record. Please upload a credit
+              record to see disputes
+            </Text>
+            <Button
+              variant="contained"
+              width="150px"
+              dropdown
+              dropdownItems={[
+                {
+                  text: "Upload from Computer",
+                  onClick: () => handleUploadFromComputer(),
+                },
+                {
+                  text: "One click Upload (pro)",
+                  onClick: () => console.log("Option 2 clicked"),
+                },
+              ]}
+            >
+              Upload
+            </Button>
+          </Stack>
+        </Box>
+      )}
+      {uploadedFile && (
+        <Box mt={2} display="flex" flexDirection="column" alignItems="center">
+          <Document
+            file={URL.createObjectURL(uploadedFile)}
+            onLoadSuccess={onDocumentLoadSuccess}
+            options={{
+              cMapUrl: "cmaps/",
+              cMapPacked: true,
+            }}
+          >
+            <Page pageNumber={pageNumber} />
+          </Document>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            mt={2}
+          >
+            <Button
+              onClick={() => setPageNumber(pageNumber - 1)}
+              disabled={pageNumber <= 1}
+            >
+              Previous
+            </Button>
+            <Text>
+              Page {pageNumber} of {numPages}
+            </Text>
+            <Button
+              onClick={() => setPageNumber(pageNumber + 1)}
+              disabled={pageNumber >= numPages}
+            >
+              Next
+            </Button>
+          </Box>
+        </Box>
+      )}
     </>
   );
 }

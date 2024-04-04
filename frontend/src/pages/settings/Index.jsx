@@ -5,6 +5,8 @@ import Profile from "./Profile";
 import Preferences from "./Preferences";
 import Security from "./Security";
 import { Subscription } from "./Subscription";
+import Notification from "./Notifications";
+import Documents from "./Documents";
 
 export default function Settings() {
   const [value, setValue] = useState(0);
@@ -39,7 +41,8 @@ export default function Settings() {
         }}
       >
         {[
-          { label: "Edit Profile" },
+          { label: "Profile" },
+          { label: "Documents" },
           { label: "Preferences" },
           { label: "Security" },
           { label: "Notifications" },
@@ -55,21 +58,26 @@ export default function Settings() {
       )}
       {value === 1 && (
         <TabPanel index={1}>
-          <Preferences />
+          <Documents />
         </TabPanel>
       )}
       {value === 2 && (
         <TabPanel index={2}>
-          <Security />
+          <Preferences />
         </TabPanel>
       )}
       {value === 3 && (
         <TabPanel index={3}>
-          <Subscription />
+          <Security />
         </TabPanel>
       )}
       {value === 4 && (
         <TabPanel index={4}>
+          <Notification />
+        </TabPanel>
+      )}
+      {value === 5 && (
+        <TabPanel index={5}>
           <Subscription />
         </TabPanel>
       )}

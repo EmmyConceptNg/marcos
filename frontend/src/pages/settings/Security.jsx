@@ -1,9 +1,7 @@
 import {
-  
   Box,
   FormControlLabel,
   Grid,
-  
   Stack,
   Switch,
   styled,
@@ -17,15 +15,17 @@ import { passwordValidation } from "../../utils/validation";
 import axios from "../../api/axios";
 import { setUser } from "../../redux/UserReducer";
 import { notify } from "../../utils/Index";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { ToastContainer } from "react-toastify";
 
 export default function Security() {
-  
-  const initialValues ={ 
-    password : '',
-    comfirmPassword : ''
-  }
-const dispatch = useDispatch()
+  const user = useSelector((state) => state.user.details);
+
+  const initialValues = {
+    password: "",
+    comfirmPassword: "",
+  };
+  const dispatch = useDispatch();
   const handleUpdate = (values, actions) => {
     actions.setSubmitting(true);
 
@@ -47,6 +47,7 @@ const dispatch = useDispatch()
 
   return (
     <Box mt={3}>
+      <ToastContainer />
       {/* Preferences Form */}
 
       <Box>
@@ -95,6 +96,8 @@ const dispatch = useDispatch()
                       required={item.required}
                       placeholder={item.placeholder}
                       aria-label={item.label}
+                      type="password"
+                      endAdornment
                     />
                   </Grid>
                 ))}

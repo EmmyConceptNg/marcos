@@ -8,7 +8,10 @@ import {
   verifyMail,
   updateUser,
   loginGoogle,
-  updateImage, 
+  updateImage,
+  updatePassword,
+  updateId,
+  updateProofOfAddress,
 } from "../controllers/UserController.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -50,10 +53,21 @@ router.get("/email/resend/:email", resendMail);
 router.post("/email/verify/:email", verifyMail);
 
 router.post("/update/:userId", updateUser);
+router.post("/update-password/:userId", updatePassword);
 router.post(
   "/update-profile-image/:userId",
   upload.single("image"),
   updateImage
+);
+router.post(
+  "/upload-id/:userId",
+  upload.single("idCard"),
+  updateId
+);
+router.post(
+  "/upload-address/:userId",
+  upload.single("address"),
+  updateProofOfAddress
 );
 // router.get('/image/:id', getImages)
 

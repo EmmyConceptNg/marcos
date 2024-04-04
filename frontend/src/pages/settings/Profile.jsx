@@ -26,6 +26,7 @@ export default function Profile() {
     city: user?.city ??'',
     postalCode : user?.postalCode ?? '',
     country: user?.country ?? '',
+    ssn: user?.ssn ?? '',
   }
 
 const fileInputRef = useRef(null);
@@ -132,64 +133,82 @@ const fileInputRef = useRef(null);
                   {
                     label: "Your Name",
                     placeholder: "Charlene Reed ",
-                    required: false, name:"fullName"
+                    required: false,
+                    name: "fullName",
                   },
                   {
                     label: "User Name",
                     placeholder: "Charlene Reed ",
-                    required: false, name: 'username'
+                    required: false,
+                    name: "username",
                   },
                   {
                     label: "Email",
                     placeholder: "charlenereed@gmail.com",
                     type: "email",
-                    required: false, name:'email'
+                    required: false,
+                    name: "email",
                   },
                   {
                     label: "Phone",
                     placeholder: "+1 00 0000 00",
                     type: "tel",
-                    required: false, name:'phone'
+                    required: false,
+                    name: "phone",
                   },
-                  
+
                   {
                     label: "Date of Birth",
                     placeholder: "25 January 1990",
-                    required: false, name: 'dob'
+                    required: false,
+                    name: "dob",
                   },
                   {
                     label: "Present Address",
                     placeholder: "San Jose, California, USA",
-                    required: false, name: 'presentAddress'
+                    required: false,
+                    name: "presentAddress",
                   },
                   {
                     label: "Permanent Address",
                     placeholder: "San Jose, California, USA",
-                    required: false, name: 'permAddress'
+                    required: false,
+                    name: "permAddress",
+                  },
+                  {
+                    label: "Social Security Number",
+                    placeholder: "SSN",
+                    required: true, type:"number",
+                    name: "ssn",
                   },
                   {
                     label: "City",
                     placeholder: "San Jose",
-                    required: false, name: 'city'
+                    required: false,
+                    name: "city",
                   },
                   {
                     label: "Postal Code",
                     placeholder: "45962",
-                    required: false, name : 'postalCode'
+                    required: false,
+                    name: "postalCode",
                   },
                   {
                     label: "Country",
                     placeholder: "USA",
-                    required: false, name: 'country'
+                    required: false,
+                    name: "country",
                   },
                 ].map((item, index) => (
                   <Grid item md={6} xs={12} key={index} mb={{ xs: 5, md: 0 }}>
-                    <Input name={item.name} 
+                    <Input
+                      name={item.name}
                       height="45px"
                       label={item.label}
                       required={item.required}
                       placeholder={item.placeholder}
                       aria-label={item.label}
+                      type={item.type}
                     />
                   </Grid>
                 ))}

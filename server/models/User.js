@@ -40,6 +40,9 @@ const schema = new mongoose.Schema(
     plaidAccessToken: String,
     plaidItemId: String,
     image: String,
+    id: String,
+    proofOfAddress: String,
+    ssn: Number,
   },
   { timestamps: true }
 );

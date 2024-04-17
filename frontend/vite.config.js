@@ -8,6 +8,11 @@ const dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      external: ["mongoose"], // Add other server-side packages if necessary
+    },
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)), // Maps '@' to the 'src' directory

@@ -32,7 +32,7 @@ const schema = new mongoose.Schema(
     },
      creditReport: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'CreditReport' // Ensure this matches the name of the credit report model
+    ref: 'CreditReport' 
   },
     planStartDate: {
       type: Date,

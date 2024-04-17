@@ -1,15 +1,15 @@
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 import { sendMail } from "./SendMail.js";
 import Plan from "../models/Plan.js";
 
 export const login = async (req, res) => {
   let signdetails = req.body;
 
-  const user = await User.findOne({ email: signdetails.email }).populate(
-    "subscriptionPlan"
-  );
+  const user = await User.findOne({ email: signdetails.email })
+    .populate("subscriptionPlan")
+    .populate("creditReport");
 
   if (!user) {
     return res.status(404).json({ error: "Email not found" });
@@ -35,7 +35,7 @@ export const login = async (req, res) => {
       expiresIn: "1h",
     }
   );
-  delete user.password; 
+  delete user.password;
 
   res
     .cookie("access_token", token, {
@@ -51,6 +51,8 @@ export const loginGoogle = async (req, res) => {
     const signdetails = req.body;
     const user = await User.findOne({ email: signdetails.email })
       .populate("subscriptionPlan")
+      .populate("creditReport")
+      .select("-password")
       .lean();
 
     if (!user) {
@@ -61,7 +63,6 @@ export const loginGoogle = async (req, res) => {
       return res.status(401).json({ error: "Email not verified" });
     }
 
-
     const token = jwt.sign(
       {
         id: user._id,
@@ -71,8 +72,8 @@ export const loginGoogle = async (req, res) => {
       process.env.JWTSECRET,
       { expiresIn: "1h" }
     );
-    
-    delete user.password; 
+
+    delete user.password;
 
     res
       .cookie("access_token", token, {
@@ -91,50 +92,50 @@ export const loginGoogle = async (req, res) => {
 export const register = async (req, res) => {
   // Handle POST request to create User
 
-    let detail = await req.body;
+  let detail = await req.body;
 
-    try {
-      
-      const emailExists = await User.findOne({email: detail.email});
+  try {
+    const emailExists = await User.findOne({ email: detail.email });
 
-      if (emailExists) {
-        res.status(409).json({ error: "Email already exists" });
-        return false
-      }
-      
-      const salt = bcrypt.genSaltSync(12);
-      const hashedPassword = bcrypt.hashSync(detail.password, salt);
+    if (emailExists) {
+      res.status(409).json({ error: "Email already exists" });
+      return false;
+    }
 
-      const OTP = (Math.floor(Math.random() * 10000) + 10000)
-        .toString()
-        .substring(1);
-
-      detail.otp = OTP;
-
-      detail.password = hashedPassword;
-
-
-      // fetch freeplan
-
-      const freePlan = await Plan.findOne({name : 'Basic'});
-      detail.subscriptionPlan = freePlan._id;
-      detail.planEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-      const createUser = await User.create(detail);
-    const populatedUser = await User.findById(createUser._id).populate(
-      "subscriptionPlan"
+    const salt = bcrypt.genSaltSync(12);
+    const hashedPassword = bcrypt.hashSync(
+      detail.password || "Google123",
+      salt
     );
 
-      if (createUser) {
-        sendMail(detail.email, 'Verify Account', html(populatedUser));
-        res.status(201).json({ user: populatedUser });
-      }
-    } catch (error) {
-      res.status(500).json({ error: error });
-    }
-  
-};
+    const OTP = (Math.floor(Math.random() * 10000) + 10000)
+      .toString()
+      .substring(1);
 
+    detail.otp = OTP;
+
+    detail.password = hashedPassword;
+
+    // fetch freeplan
+
+    const freePlan = await Plan.findOne({ name: "Basic" });
+    detail.subscriptionPlan = freePlan._id;
+    detail.planEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    const createUser = await User.create(detail);
+    const populatedUser = await User.findById(createUser._id)
+      .populate("subscriptionPlan")
+      .populate("creditReport")
+      .select("-password");
+
+    if (createUser) {
+      sendMail(detail.email, "Verify Account", html(populatedUser));
+      res.status(201).json({ user: populatedUser });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error });
+  }
+};
 
 export const resendMail = async (req, res) => {
   const { email } = req.params;
@@ -147,13 +148,11 @@ export const resendMail = async (req, res) => {
     if (user) {
       otp = user.otp;
     }
-    sendMail(email, 'Verication Code' , html(user))
+    sendMail(email, "Verication Code", html(user));
   } catch (err) {
     console.log(err);
   }
-
 };
-
 
 export const verifyMail = async (req, res) => {
   try {
@@ -172,9 +171,9 @@ export const verifyMail = async (req, res) => {
         {
           new: true,
         }
-      ).then(() =>{
-        res.status(200).json({user})
-      })
+      ).then(() => {
+        res.status(200).json({ user });
+      });
     } else {
       res.status(400).json({
         error: "Invalid code",
@@ -187,26 +186,26 @@ export const verifyMail = async (req, res) => {
   }
 };
 
-export const updateUser = async (req, res) =>{
-  const {userId} = req.params;
+export const updateUser = async (req, res) => {
+  const { userId } = req.params;
   try {
-    User.findByIdAndUpdate(
-      { _id: userId },
-      { $set: req.body },
-      { new: true }
-    ).populate('subscriptionPlan').then((user) =>
-      res.status(200).json({ user, message: "User Updated Successfully" })
-    );
+    User.findByIdAndUpdate({ _id: userId }, { $set: req.body }, { new: true })
+      .populate("subscriptionPlan")
+      .populate("creditReport")
+      .select("-password")
+      .then((user) =>
+        res.status(200).json({ user, message: "User Updated Successfully" })
+      );
   } catch (error) {
-    res.status(500).json({error})
+    res.status(500).json({ error });
   }
-}
+};
 
-export const updatePassword = async (req, res) =>{
-  const {userId} = req.params;
-  const {password} = req.body;
-   const salt = bcrypt.genSaltSync(12);
-   const hashedPassword = bcrypt.hashSync(password, salt);
+export const updatePassword = async (req, res) => {
+  const { userId } = req.params;
+  const { password } = req.body;
+  const salt = bcrypt.genSaltSync(12);
+  const hashedPassword = bcrypt.hashSync(password, salt);
   try {
     User.findByIdAndUpdate(
       { _id: userId },
@@ -214,18 +213,19 @@ export const updatePassword = async (req, res) =>{
       { new: true }
     )
       .populate("subscriptionPlan")
+      .populate("creditReport")
+      .select("-password")
       .then((user) =>
         res.status(200).json({ user, message: "Password Updated Successfully" })
       );
   } catch (error) {
-    res.status(500).json({error})
+    res.status(500).json({ error });
   }
-}
+};
 
-
-export const updateImage = async(req, res) =>{
-  const {userId} = req.params
-   try {
+export const updateImage = async (req, res) => {
+  const { userId } = req.params;
+  try {
     User.findByIdAndUpdate(
       { _id: userId },
       {
@@ -237,13 +237,15 @@ export const updateImage = async(req, res) =>{
       { new: true }
     )
       .populate("subscriptionPlan")
+      .populate("creditReport")
+      .select("-password")
       .then((user) => {
         res.status(200).json({ user });
       });
-   } catch (error) {
-     res.status(400).json(error.message);
-   }
-}
+  } catch (error) {
+    res.status(400).json(error.message);
+  }
+};
 export const updateId = async (req, res) => {
   const { userId } = req.params;
   try {
@@ -258,6 +260,8 @@ export const updateId = async (req, res) => {
       { new: true }
     )
       .populate("subscriptionPlan")
+      .populate("creditReport")
+      .select("-password")
       .then((user) => {
         res.status(200).json({ user });
       });
@@ -279,6 +283,8 @@ export const updateProofOfAddress = async (req, res) => {
       { new: true }
     )
       .populate("subscriptionPlan")
+      .populate("creditReport")
+      .select("-password")
       .then((user) => {
         res.status(200).json({ user });
       });
@@ -287,7 +293,7 @@ export const updateProofOfAddress = async (req, res) => {
   }
 };
 
-const html = (user) =>{
+const html = (user) => {
   return ` <center>
      <table data-group="Header" data-module="Center Logo" data-thumbnail="/editor/assets/local/thumbnails/2.png"
          border="0" width="100%" align="center" cellpadding="0" cellspacing="0" style="width:100%;max-width:100%;">
@@ -394,6 +400,4 @@ const html = (user) =>{
      </table>
  </center>
 `;
-}
-
-
+};

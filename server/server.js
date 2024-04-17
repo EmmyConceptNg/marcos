@@ -7,7 +7,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import userRoutes from "./routes/User.js";
 import subscriptionRoutes from "./routes/Subscription.js";
-import recordRoutes from "./routes/Record.js";
+import reportRoutes from "./routes/CreditReport.js";
 import plaidController from "./routes/Plaid.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -35,7 +35,7 @@ const envFile =
 app.use("/images", express.static(path.join(__dirname, "public/images")));
 app.use('/api/auth', userRoutes)
 app.use('/api/subscription', subscriptionRoutes)
-app.use('/api/record', recordRoutes)
+app.use('/api/creditreport', reportRoutes)
 app.use('/api/plaid', plaidController)
 
 /* MONGOOSE SETUP */

@@ -1,20 +1,17 @@
 import express from 'express';
-import {
-  getRecord,
-  createRecord,
-  uploadRecord,
-} from "../controllers/RecordController.js";
-import multer from 'multer';
-import fs from 'fs'
+import { getCreditReport, createCreditReport, uploadRecord } from '../controllers/CreditReportController.js';
+import multer from "multer";
+import fs from "fs";
 import { fileURLToPath } from "url";
-import path from 'path'
+import path from "path";
 
 const router = express.Router();
 
 
+
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
-    const imagesDir = path.join(__dirname, "public", "records"); 
+    const imagesDir = path.join(__dirname, "public", "records");
     if (!fs.existsSync(imagesDir)) {
       fs.mkdirSync(imagesDir, { recursive: true });
     }
@@ -26,7 +23,6 @@ const storage = multer.diskStorage({
   },
 });
 
-
 // File filter to check for PDF and HTML
 const fileFilter = (req, file, callback) => {
   if (["application/pdf", "text/html"].includes(file.mimetype)) {
@@ -35,7 +31,6 @@ const fileFilter = (req, file, callback) => {
     callback(new Error("Unsupported file type"), false);
   }
 };
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,13 +44,8 @@ const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 
 
-
-
-
-router.get('/', getRecord);
-router.post('/', createRecord);
+router.get('/creditreport', getCreditReport);
+router.post('/creditreport', createCreditReport);
 router.post("/upload/:userId", upload.single("file"), uploadRecord);
-
-// Add more routes as needed
 
 export default router;

@@ -17,6 +17,9 @@ import { usePlaidLink } from "react-plaid-link";
 
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import ProgressMeter from "../../components/loader";
+import ProgressLoader from "../../components/loader";
+import { mapToRowsStructure } from "../../utils/helper";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
@@ -136,7 +139,7 @@ function Overview() {
   return (
     <>
       <Text color="#131C30" fs="36px" fw="700">
-        Hi Marcos!
+        Hi {user?.fullName}!
       </Text>
 
       {/* Update Profile */}
@@ -225,19 +228,11 @@ function Overview() {
   );
 }
 function Disputes() {
-  const [record, setRecord] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
   const user = useSelector((state) => state.user.details);
-   const [numPages, setNumPages] = useState(null);
-   const [pageNumber, setPageNumber] = useState(1);
-
-   useEffect(() => {
-     return () => {
-       if (uploadedFile) {
-         URL.revokeObjectURL(URL.createObjectURL(uploadedFile));
-       }
-     };
-   }, [uploadedFile]);
+ 
 
   const handleUploadFromComputer = () => {
     const fileInput = document.createElement("input");
@@ -255,14 +250,15 @@ function Disputes() {
           formData.append("file", file);
 
           await axios
-            .post(`/api/record/upload/${user?._id}`, formData, {
+            .post(`/api/creditreport/upload/${user?._id}`, formData, {
               headers: {
                 "Content-Type": "multipart/form-data",
               },
             })
             .then((response) => {
               notify(response.data.success, "success");
-              //  dispatch(setUser(response.data.user));
+              dispatch(setUser(response.data.user));
+              navigate("/dashboard/credit-report");
             })
             .catch((error) => {
               notify(error.response?.data.error, "error");
@@ -276,14 +272,38 @@ function Disputes() {
     fileInput.click();
   };
 
-  const handleRemoveFile = () => {
-    setUploadedFile(null); // Reset the uploaded file state
-  };
+const [report, setReport] = useState([])
+  const [creditScore, setCreditScore] = useState({
+    TUC: "0",
+    EXP: "0",
+    EQF: "0",
+  });
 
-  function onDocumentLoadSuccess({ numPages }) {
-    setNumPages(numPages);
-    setPageNumber(1); // Set to first page
-  }
+  useEffect(() => {
+   if (user && user.creditReport && user.creditReport.creditReportData) {
+     const summaryData = user.creditReport.creditReportData["summary"];
+     setReport(mapToRowsStructure(summaryData));
+
+     //Credit score
+     const creditScoreArray =
+       user.creditReport.creditReportData["credit_score"];
+     if (creditScoreArray && creditScoreArray.length > 0) {
+       const creditScoreObject = creditScoreArray.find(
+         (entry) => entry.label === "Credit Score:"
+       );
+       if (creditScoreObject) {
+         const creditScoreData = creditScoreObject.data;
+         setCreditScore(creditScoreData);
+       } else {
+         console.log("Credit Score not found.");
+       }
+     } else {
+       console.log("No credit score data available.");
+     }
+   } else {
+     console.log("Summary data not found");
+   }
+  }, []);
 
 
   return (
@@ -291,7 +311,7 @@ function Disputes() {
       <Text color="#131C30" fs="25px" fw="700">
         Disputes
       </Text>
-      {record ? (
+      {user?.creditReport ? (
         <Box>
           <Box>
             <Grid container spacing={3}>
@@ -390,24 +410,44 @@ function Disputes() {
             </Grid>
           </Box>
           <Box>
-            <Grid container spacing={3}>
+            <Grid container spacing={3} justifyContent="center">
+              
+
               {[
+                { name: "TUC", image: "trans.svg", value: creditScore.TUC },
                 {
-                  image: "/assets/images/trans.svg",
-                  updated: "Feb 28, 2024 ",
+                  name: "EXP",
+                  image: "experian.svg",
+                  value: creditScore.EXP,
                 },
-                {
-                  image: "/assets/images/experian.svg",
-                  updated: "Feb 28, 2024 ",
-                },
-                {
-                  image: "/assets/images/equifax.svg",
-                  updated: "Feb 28, 2024 ",
-                },
+                { name: "EQF", image: "equifax.svg", value: creditScore.EQF },
               ].map((item, index) => {
                 return (
                   <Grid item key={index} md={4} sm={6} xs={12}>
                     <Box
+                      display="flex"
+                      flexDirection="column"
+                      justifyContent="space-between"
+                      height="290px"
+                      border="1px solid #ECECEC"
+                      p={2}
+                      bgcolor="#fff"
+                    >
+                      <ProgressLoader
+                        key={index}
+                        value={+item.value}
+                        image={
+                          <Box
+                            component="img"
+                            src={`/assets/images/${item.image}`}
+                            key={index}
+                            width={{ xs: "80px", sm: "100px" }}
+                          />
+                        }
+                        
+                      />
+                    </Box>
+                    {/* <Box
                       display="flex"
                       flexDirection="column"
                       justifyContent="space-between"
@@ -427,7 +467,7 @@ function Disputes() {
                           {`Last updated ${item.updated}`}
                         </Text>
                       </Stack>
-                    </Box>
+                    </Box> */}
                   </Grid>
                 );
               })}
@@ -465,42 +505,6 @@ function Disputes() {
               Upload
             </Button>
           </Stack>
-        </Box>
-      )}
-      {uploadedFile && (
-        <Box mt={2} display="flex" flexDirection="column" alignItems="center">
-          <Document
-            file={URL.createObjectURL(uploadedFile)}
-            onLoadSuccess={onDocumentLoadSuccess}
-            options={{
-              cMapUrl: "cmaps/",
-              cMapPacked: true,
-            }}
-          >
-            <Page pageNumber={pageNumber} />
-          </Document>
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            mt={2}
-          >
-            <Button
-              onClick={() => setPageNumber(pageNumber - 1)}
-              disabled={pageNumber <= 1}
-            >
-              Previous
-            </Button>
-            <Text>
-              Page {pageNumber} of {numPages}
-            </Text>
-            <Button
-              onClick={() => setPageNumber(pageNumber + 1)}
-              disabled={pageNumber >= numPages}
-            >
-              Next
-            </Button>
-          </Box>
         </Box>
       )}
     </>

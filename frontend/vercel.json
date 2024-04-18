@@ -6,12 +6,5 @@
       "status": 200,
       "dest": "/"
     }
-  ],
-  "builds": [
-    {
-      "source": "/frontend/**/*",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    }
   ]
 }

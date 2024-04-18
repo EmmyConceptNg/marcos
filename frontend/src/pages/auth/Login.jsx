@@ -18,6 +18,7 @@ import { loginValidation } from "../../utils/validation";
 import { useGoogleLogin } from "@react-oauth/google";
 import { Icon } from "@iconify/react";
 
+
 export default function Login() {
   // const location = useLocation();
   // const queryParams = new URLSearchParams(location.search);
@@ -30,6 +31,7 @@ export default function Login() {
   const dispatch = useDispatch();
 
   const navigate = useNavigate();
+  
 
   const handleLogin = (values, actions) => {
     actions.setSubmitting(true);
@@ -45,7 +47,13 @@ export default function Login() {
         if (response.data.user.emailVerified === false) {
           navigate("/verification/link/email");
         } else {
-          navigate("/dashboard");
+           const lastUrl = localStorage.getItem("lastUrl");
+          if (lastUrl) {
+            navigate(lastUrl);
+            localStorage.removeItem("lastUrl");
+          } else {
+            navigate("/dashboard");
+          }
         }
       })
       .catch((error) => {

@@ -19,7 +19,6 @@ import Button from "../../../components/Button";
 import { notify } from "../../../utils/Index";
 import axios from "../../../api/axios";
 import { setUser } from "../../../redux/UserReducer";
-import User from "../../../../../server/models/User";
 
 export default function CreditReport() {
   const dispatch = useDispatch()

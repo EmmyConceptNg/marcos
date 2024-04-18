@@ -8,7 +8,6 @@ const dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
-  root: "frontend",
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)), // Maps '@' to the 'src' directory

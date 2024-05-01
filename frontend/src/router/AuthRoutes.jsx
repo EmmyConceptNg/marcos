@@ -13,7 +13,7 @@ import VerifiedSuccess from "../pages/auth/VerifiedSuccess";
 import "react-toastify/dist/ReactToastify.css";
 
 export const AuthRoutes = () => {
-  return useRoutes([
+  return [
     { path: "/login", element: <Login /> },
     { path: "/signup", element: <Signup /> },
     { path: "/reset-password/email", element: <Password /> },
@@ -24,5 +24,5 @@ export const AuthRoutes = () => {
     { path: "/verification/:email", element: <VerificationEmail /> },
     { path: "/verification/:email/verified", element: <VerifiedSuccess /> },
 
-  ]);
+  ];
 };

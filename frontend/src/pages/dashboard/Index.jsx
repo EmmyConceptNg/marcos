@@ -178,7 +178,7 @@ function Overview() {
         </Box>
       )}
 
-      {proPlan && user?.subscriptionPlan.name === "Basic" && (
+      {/* {proPlan && user?.subscriptionPlan.name === "Basic" && ( */}
         <Box
           height={{ md: "199px" }}
           sx={{
@@ -223,7 +223,7 @@ function Overview() {
             </Stack>
           ))}
         </Box>
-      )}
+      {/* )} */}
     </>
   );
 }

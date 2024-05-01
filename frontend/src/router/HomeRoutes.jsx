@@ -4,8 +4,8 @@ import Home from "../pages/home/Index";
 import Components from "../components/Index";
 
 export const HomeRoutes = () =>{
-    return useRoutes([
+    return[
       { path: "/", element: <Home /> },
       { path: "/components", element: <Components /> },
-    ]);
+    ];
 }

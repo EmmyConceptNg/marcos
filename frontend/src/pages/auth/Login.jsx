@@ -165,7 +165,6 @@ export default function Login() {
                       <Input
                         label="Password"
                         type="password"
-                        endAdornment
                         required
                         placeholder="Enter you password"
                         aria-label="enter your password"

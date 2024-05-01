@@ -10,7 +10,7 @@ import Support from "../pages/support/Index";
 import SubscriptionSuccess from "../pages/dashboard/Subscription/SubscriptionSuccess";
 
 export const DashboardRoutes = () =>{
-    return useRoutes([
+    return [
       {
         path: "/dashboard",
         element: <DashboardLayout />,
@@ -29,5 +29,5 @@ export const DashboardRoutes = () =>{
           { path: "subscription/success/:sessionId/:planId", element: <SubscriptionSuccess /> },
         ],
       },
-    ]);
+    ];
 }

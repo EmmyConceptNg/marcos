@@ -40,7 +40,7 @@ export default function Input({
   placeholder, onInput, inputProp,
   
   name, height="44px",
-  width, type="text", endAdornment,  details,
+  width, type="text",  details,
   sx,
 }) {
 

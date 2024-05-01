@@ -56,8 +56,6 @@ export const uploadRecord = async (req, res) => {
   }
 };
 
-
-
 const parseHtmlAndStore = async (htmlContent, userId, res) => {
   const $ = cheerio.load(htmlContent);
   let creditReportData = {};
@@ -77,7 +75,7 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
       return;
     }
 
-     key = toSnakeCase(key);
+    key = toSnakeCase(key);
 
     // Special treatment for 'Account History'
     if (key === "account_history") {
@@ -121,7 +119,7 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
 
       // Add the accounts array to the creditReportData object
       creditReportData[key] = accounts;
-    }else if (key === "public_information") {
+    } else if (key === "public_information") {
       let information = [];
 
       // Process each sub-header as an account
@@ -162,12 +160,36 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
 
       // Add the accounts array to the creditReportData object
       creditReportData[key] = information;
+    } else if (key === "inquiries") {
+      console.log("inquires");
+
+      const sectionData = [];
+      $(wrapper)
+        .find(".rpt_content_table.rpt_content_header")
+        .each((_, table) => {
+          const rows = $(table).find("tr:not(:first-child)");
+          rows.each((_, row) => {
+            const creditor_name = $(row).find("td").eq(0).text().trim();
+            const type_of_business = $(row).find("td").eq(1).text().trim();
+            const date_of_enquiry = $(row).find("td").eq(2).text().trim();
+            const credit_bereau = $(row).find("td").eq(3).text().trim();
+            sectionData.push({
+              creditor_name: creditor_name,
+              data: {
+                type_of_business: type_of_business,
+                date_of_enquiry: date_of_enquiry,
+                credit_bereau: credit_bereau,
+              },
+            });
+          });
+        });
+
+      // Add the general section data to creditReportData under the appropriate key
+      creditReportData[key] = sectionData;
     } else {
       const sectionData = [];
       $(wrapper)
-        .find(
-          ".re-even-odd.rpt_content_table.rpt_content_header.rpt_table4column"
-        )
+        .find(".rpt_content_table.rpt_content_header")
         .each((_, table) => {
           const rows = $(table).find("tr:not(:first-child)");
           rows.each((_, row) => {

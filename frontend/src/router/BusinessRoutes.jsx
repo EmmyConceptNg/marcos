@@ -10,7 +10,7 @@ import Clients from "../pages/business/Clients/Index";
 import ClientDetails from "../pages/business/Clients/Edit/Index";
 
 export const BusinessRoutes = () =>{
-    return useRoutes([
+    return [
       {
         path: "/business",
         element: <DashboardLayout />,
@@ -29,5 +29,5 @@ export const BusinessRoutes = () =>{
           { path: "support", element: <Support /> },
         ],
       },
-    ]);
+    ];
 }

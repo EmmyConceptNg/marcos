@@ -1,10 +1,12 @@
 import {
   Box,
   Collapse,
+  Divider,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Stack,
 } from "@mui/material";
 import { useState } from "react";
 import { Icon } from "@iconify/react";
@@ -13,6 +15,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { useSelector } from "react-redux";
 import Text from "../../Text";
+import { formatCurrency } from "../../../utils/helper";
 
 export const Sidebar = () => {
   const [open, setOpen] = useState(true);
@@ -231,7 +234,8 @@ export const Sidebar = () => {
               : null}
         </Box>
 
-        <Box mt="350px">
+        <Box mt="">
+          <Divider />
           {Settings.map((item) => {
             const selected = location.pathname.includes(item?.link);
             return (
@@ -317,6 +321,19 @@ export const Sidebar = () => {
               </Box>
             );
           })}
+        </Box>
+
+        <Box mt="200px">
+          <Box border="1px solid #B7B7B7" m={3} p={2} borderRadius="12px">
+            <Stack>
+              <Text fs="20px" fw="550" color="#131C30" mb={2}>
+                Balance
+              </Text>
+              <Text fs="20px" fw="700" color="#131C30" mb={2}>
+                {formatCurrency(user?.balance || 0, "$") }
+              </Text>
+            </Stack>
+          </Box>
         </Box>
       </Box>
     </div>

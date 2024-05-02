@@ -213,29 +213,65 @@ function flattenDetails(details) {
 function Disputes() {
    const user = useSelector((state) => state.user.details);
    const [disputes, setDisputes] = useState([]);
-   const [checkedItems, setCheckedItems] = useState({});
+   
    const [customMessages, setCustomMessages] = useState({});
    const [inquiries, setInquiries] = useState([]);
    const [accounts, setAccounts] = useState([])
+
+   const [checkboxStates, setCheckboxStates] = useState({});
    
 
-   useEffect(() => {
-     const { negatives, checkBoxState, messageState } =
-       identifyNegativeItems(user);
-       const query = queryAccount(user);
-       setAccounts(query)
-     setDisputes(negatives);
-     setCheckedItems(checkBoxState);
-     setCustomMessages(messageState);
-     const userInquiries = user?.creditReport?.creditReportData?.inquiries;
-     setInquiries(userInquiries)
-   }, [user]);
+  useEffect(() => {
+    const { negatives, checkBoxState, messageState } =
+      identifyNegativeItems(user);
+    const queries = queryAccount(user);
 
-   const handleCheckboxChange = (infoIndex) => {
-     setCheckedItems((prevState) => ({
-       ...prevState,
-       [infoIndex]: !prevState[infoIndex],
-     }));
+    setDisputes(negatives);
+    setAccounts(queries);
+    setCustomMessages(messageState);
+
+    const userInquiries = user?.creditReport?.creditReportData?.inquiries || [];
+    setInquiries(userInquiries);
+
+    // Initialize states for disputes, inquiries, and accounts separately
+    const newCheckboxState = {
+      disputes: negatives.map(() => ({
+        EQF: false,
+        EXP: false,
+        TUC: false,
+      })),
+      inquiries: userInquiries.map(() => false), // Assuming inquiries do not have bureau details
+      accounts: queries.map(() => ({
+        EQF: false,
+        EXP: false,
+        TUC: false,
+      })),
+    };
+
+    setCheckboxStates(newCheckboxState);
+  }, [user]);
+
+   const handleSelectAllCheckbox = (type, checked) => {
+     setCheckboxStates((prevState) => {
+       if (type === "disputes" || type === "accounts") {
+         return {
+           ...prevState,
+           [type]: prevState[type].map((checkboxes) => ({
+             EQF: checked,
+             EXP: checked,
+             TUC: checked,
+           })),
+         };
+       } else if (type === "inquiries") {
+         // Assuming inquiries do not have bureau details
+         return {
+           ...prevState,
+           [type]: prevState[type].map(() => checked),
+         };
+       } else {
+         return prevState;
+       }
+     });
    };
 
    const handleCustomMessageChange = (infoIndex, message) => {
@@ -245,14 +281,60 @@ function Disputes() {
      }));
    };
 
-  const handleAttackNow = () => {
-    const selectedDisputes = disputes.filter((_, index) => checkedItems[index]);
-    const disputesWithMessages = selectedDisputes.map((dispute, index) => ({
-      ...dispute,
-      customMessage: customMessages[index],
-    }));
-    console.log("Disputes to submit:", disputesWithMessages);
-    // Here, you would handle submission, like an API call
+ const handleAttackNow = () => {
+   // Filter out selected disputes
+   const selectedDisputes = disputes.filter(
+     (_, index) =>
+       checkboxStates.disputes[index].EQF ||
+       checkboxStates.disputes[index].EXP ||
+       checkboxStates.disputes[index].TUC
+   );
+
+   // Filter out selected accounts
+   const selectedAccounts = accounts.filter(
+     (_, index) =>
+       checkboxStates.accounts[index].EQF ||
+       checkboxStates.accounts[index].EXP ||
+       checkboxStates.accounts[index].TUC
+   );
+
+   // Filter out selected inquiries
+   const selectedInquiries = inquiries.filter(
+     (_, index) => checkboxStates.inquiries[index]
+   );
+
+   // Combine all selected items into one array
+   const selectedItems = [
+     ...selectedDisputes,
+     ...selectedAccounts,
+     ...selectedInquiries,
+   ];
+
+   // Log for debugging or process the selected items as needed
+   console.log("Selected items for attack:", selectedItems);
+
+   // Here you would typically handle the selected items, for example, by making an API call.
+ };
+
+  const handleCheckboxChange = (type, index, bureau) => {
+    setCheckboxStates((prevState) => {
+      if (bureau) {
+        return {
+          ...prevState,
+          [type]: prevState[type].map((item, i) =>
+            i === index ? { ...item, [bureau]: !item[bureau] } : item
+          ),
+        };
+      } else {
+        // For checkboxes without bureau like inquiries
+        return {
+          ...prevState,
+          [type]: prevState[type].map((checked, i) =>
+            i === index ? !checked : checked
+          ),
+        };
+      }
+    });
   };
 
   return (
@@ -262,6 +344,25 @@ function Disputes() {
         spacing={{ sm: 4, xs: 1 }}
         sx={{ overflow: "hidden", overflowX: "auto" }}
       >
+        {disputes.length > 0 && <Stack direction="row" spacing={2} alignItems="center">
+          <Checkbox
+            onChange={(e) =>
+              handleSelectAllCheckbox("disputes", e.target.checked)
+            }
+            checked={checkboxStates.disputes?.every(
+              (checkboxes) => checkboxes.EQF && checkboxes.EXP && checkboxes.TUC
+            )}
+            sx={{
+              color: "#FF9D43",
+              "&.Mui-checked": {
+                color: "#FF9D43",
+              },
+            }}
+          />
+          <Text fs="20px" fw="550" color="#131C30" mb={2}>
+            Public Records
+          </Text>
+        </Stack>}
         {disputes.map((dispute, infoIndex) => (
           <Box key={infoIndex} sx={{ mb: 4 }}>
             <Text fs="20px" fw="550" color="#131C30" mb={2}>
@@ -272,8 +373,8 @@ function Disputes() {
                 bureau="EQF"
                 details={dispute.details.EQF}
                 infoIndex={infoIndex}
-                isChecked={checkedItems[infoIndex]}
-                onCheckboxChange={handleCheckboxChange}
+                onCheckboxChange={handleCheckboxChange} // Pass this function
+                checkboxStates={checkboxStates}
                 customMessage={customMessages[infoIndex]}
                 onCustomMessageChange={handleCustomMessageChange}
               />
@@ -281,8 +382,8 @@ function Disputes() {
                 bureau="EXP"
                 details={dispute.details.EXP}
                 infoIndex={infoIndex}
-                isChecked={checkedItems[infoIndex]}
-                onCheckboxChange={handleCheckboxChange}
+                onCheckboxChange={handleCheckboxChange} // Pass this function
+                checkboxStates={checkboxStates}
                 customMessage={customMessages[infoIndex]}
                 onCustomMessageChange={handleCustomMessageChange}
               />
@@ -290,8 +391,8 @@ function Disputes() {
                 bureau="TUC"
                 details={dispute.details.TUC}
                 infoIndex={infoIndex}
-                isChecked={checkedItems[infoIndex]}
-                onCheckboxChange={handleCheckboxChange}
+                onCheckboxChange={handleCheckboxChange} // Pass this function
+                checkboxStates={checkboxStates}
                 customMessage={customMessages[infoIndex]}
                 onCustomMessageChange={handleCustomMessageChange}
               />
@@ -302,12 +403,32 @@ function Disputes() {
 
       {inquiries.length > 0 && (
         <Box>
-          <Text fs="18px" fw="550" color={"#131C30"} sx={{ mb: 2 }}>
-            Inquiries
-          </Text>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Checkbox
+              onChange={(e) =>
+                handleSelectAllCheckbox("inquiries", e.target.checked)
+              }
+              checked={checkboxStates.inquiries.every(Boolean)}
+              sx={{
+                color: "#FF9D43",
+                "&.Mui-checked": {
+                  color: "#FF9D43",
+                },
+              }}
+            />
+            <Text fs="18px" fw="550" color={"#131C30"} sx={{ mb: 2 }}>
+              Inquiries
+            </Text>
+          </Stack>
           <Grid container>
             {inquiries.map((inquiry, index) => (
-              <InquiryBox inquiry={inquiry} key={inquiries} />
+              <InquiryBox
+                inquiry={inquiry}
+                key={index}
+                onCheckboxChange={handleCheckboxChange} // Pass this function
+                checkboxStates={checkboxStates}
+                infoIndex={index}
+              />
             ))}
           </Grid>
         </Box>
@@ -320,10 +441,27 @@ function Disputes() {
       >
         {accounts.length > 0 && (
           <>
-          <Divider />
-            <Text fs="20px" fw="700" color={"#131C30"} sx={{ my: 2 }}>
-              Accounts
-            </Text>
+            <Divider />
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Checkbox
+                onChange={(e) =>
+                  handleSelectAllCheckbox("accounts", e.target.checked)
+                }
+                checked={checkboxStates.accounts?.every(
+                  (checkboxes) =>
+                    checkboxes.EQF && checkboxes.EXP && checkboxes.TUC
+                )}
+                sx={{
+                  color: "#FF9D43",
+                  "&.Mui-checked": {
+                    color: "#FF9D43",
+                  },
+                }}
+              />
+              <Text fs="20px" fw="700" color={"#131C30"} sx={{ my: 2 }}>
+                Accounts
+              </Text>
+            </Stack>
           </>
         )}
         {accounts.map((account, infoIndex) => (
@@ -337,8 +475,8 @@ function Disputes() {
                   bureau="EQF"
                   details={account.details.EQF}
                   infoIndex={infoIndex}
-                  isChecked={checkedItems[infoIndex]}
-                  onCheckboxChange={handleCheckboxChange}
+                  onCheckboxChange={handleCheckboxChange} // Pass this function
+                  checkboxStates={checkboxStates}
                   customMessage={customMessages[infoIndex]}
                   onCustomMessageChange={handleCustomMessageChange}
                 />
@@ -348,8 +486,8 @@ function Disputes() {
                   bureau="EXP"
                   details={account.details.EXP}
                   infoIndex={infoIndex}
-                  isChecked={checkedItems[infoIndex]}
-                  onCheckboxChange={handleCheckboxChange}
+                  onCheckboxChange={handleCheckboxChange} // Pass this function
+                  checkboxStates={checkboxStates}
                   customMessage={customMessages[infoIndex]}
                   onCustomMessageChange={handleCustomMessageChange}
                 />
@@ -359,8 +497,8 @@ function Disputes() {
                   bureau="TUC"
                   details={account.details.TUC}
                   infoIndex={infoIndex}
-                  isChecked={checkedItems[infoIndex]}
-                  onCheckboxChange={handleCheckboxChange}
+                  onCheckboxChange={handleCheckboxChange} // Pass this function
+                  checkboxStates={checkboxStates}
                   customMessage={customMessages[infoIndex]}
                   onCustomMessageChange={handleCustomMessageChange}
                 />
@@ -390,10 +528,11 @@ function Attacks({setType}) {
 }
 
 function BureauDetails({
+  bureau,
   details,
   infoIndex,
   onCheckboxChange,
-  isChecked,
+  checkboxStates,
   onCustomMessageChange,
   customMessage,
 }) {
@@ -422,8 +561,8 @@ function BureauDetails({
             alignItems="center"
           >
             <Checkbox
-              checked={isChecked}
-              onChange={() => onCheckboxChange(infoIndex)}
+              checked={checkboxStates["disputes"][infoIndex][bureau] || false}
+              onChange={() => onCheckboxChange("disputes", infoIndex, bureau)}
               sx={{
                 color: "#FF9D43",
                 "&.Mui-checked": {
@@ -457,10 +596,11 @@ function BureauDetails({
 
 
 function AccountDetails({
+  bureau,
   details,
   infoIndex,
   onCheckboxChange,
-  isChecked,
+  checkboxStates,
   onCustomMessageChange,
   customMessage,
 }) {
@@ -489,8 +629,8 @@ function AccountDetails({
             alignItems="center"
           >
             <Checkbox
-              checked={isChecked}
-              onChange={() => onCheckboxChange(infoIndex)}
+              checked={checkboxStates["accounts"][infoIndex][bureau] || false}
+              onChange={() => onCheckboxChange("accounts", infoIndex, bureau)}
               sx={{
                 color: "#FF9D43",
                 "&.Mui-checked": {
@@ -523,37 +663,37 @@ function AccountDetails({
 
 
 
-function InquiryBox({inquiry}){
- return (
-   <Grid item md={4} xs={6}>
-     <Box display="flex" flexDirection="row" marginBottom={2}>
-       <Box
-         border="1px solid #FF9D43"
-         borderRadius="10px"
-         padding={2}
-         minWidth="300px"
-       >
-         <Stack spacing={1}>
-           <Stack
-             direction="row"
-             justifyContent="flex-start"
-             alignItems="center"
-           >
-             <Checkbox
-               //  checked={isChecked}
-               //  onChange={() => onCheckboxChange(infoIndex)}
-               sx={{
-                 color: "#FF9D43",
-                 "&.Mui-checked": {
-                   color: "#FF9D43",
-                 },
-               }}
-             />
-           {inquiry.creditor_name}
-           </Stack>
-         </Stack>
-       </Box>
-     </Box>
-   </Grid>
- );
+function InquiryBox({ inquiry, onCheckboxChange, checkboxStates, infoIndex }) {
+  return (
+    <Grid item md={4} xs={6}>
+      <Box display="flex" flexDirection="row" marginBottom={2}>
+        <Box
+          border="1px solid #FF9D43"
+          borderRadius="10px"
+          padding={2}
+          minWidth="300px"
+        >
+          <Stack spacing={1}>
+            <Stack
+              direction="row"
+              justifyContent="flex-start"
+              alignItems="center"
+            >
+              <Checkbox
+                checked={checkboxStates["inquiries"][infoIndex] || false}
+                onChange={() => onCheckboxChange("inquiries", infoIndex)}
+                sx={{
+                  color: "#FF9D43",
+                  "&.Mui-checked": {
+                    color: "#FF9D43",
+                  },
+                }}
+              />
+              {inquiry.creditor_name}
+            </Stack>
+          </Stack>
+        </Box>
+      </Box>
+    </Grid>
+  );
 }

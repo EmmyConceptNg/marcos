@@ -20,3 +20,8 @@ export function mapToRowsStructure(originalData) {
 
   return mappedRows;
 }
+
+
+export function formatCurrency(number, currencySymbol = "$") {
+  return currencySymbol + number?.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,");
+}

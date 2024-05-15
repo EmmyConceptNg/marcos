@@ -13,12 +13,13 @@ import SearchInput from "../../../components/Search";
 import { Add, FilterList } from "@mui/icons-material";
 import Button from "../../../components/Button";
 import { Helmet } from "react-helmet";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import axios from "../../../api/axios";
 import { notify } from "../../../utils/Index";
 import { ToastContainer } from "react-toastify";
 import moment from "moment";
 import NoBalanceModal from "../../../components/modal/NoBalanceModal";
+import { setUser } from "../../../redux/UserReducer";
 
 
 export default function DisputeCenters() {
@@ -235,6 +236,9 @@ function Disputes() {
 
   const [checkboxStates, setCheckboxStates] = useState({});
 
+
+  const dispatch = useDispatch()
+
   useEffect(() => {
     const { negatives, checkBoxState, messageState } =
       identifyNegativeItems(user);
@@ -338,6 +342,7 @@ function Disputes() {
 
       // Handle the response from the server
       console.log(response.data);
+      dispatch(setUser(response.data.user));
       notify("Success: Letters have been generated and sent!", "success");
 
       setAttacking(false)

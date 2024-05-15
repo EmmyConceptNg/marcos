@@ -207,10 +207,10 @@ async function updateDatabaseWithLetterPaths(userId, letterPaths, res) {
       .populate("letters")
       .select("-password");
     // Don't forget to await the same as above.
-    res.status(200).json({ user, message: "Dispute letters generated and saved successfully." });
+    res.status(200).json({ user:user, message: "Dispute letters generated and saved successfully." });
   } catch (dbError) {
     console.error("Error updating the database with letter paths:", dbError);
-    res.status(500).json({ message: "Error updating the database with letter paths." });
+    res.status(500).json({ error: "Error updating the database with letter paths." });
   }
 }
 

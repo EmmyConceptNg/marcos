@@ -556,7 +556,8 @@ function Disputes() {
   );
 }
 
-function Attacks({ setType, user }) {
+function Attacks({ setType }) {
+  const user = useSelector((state) => state.user.details);
   const [openNoBalance, setOpenNoBalance] = useState(false);
 
   const handleDownloadAll = async () => {

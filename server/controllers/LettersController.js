@@ -197,7 +197,7 @@ async function updateDatabaseWithLetterPaths(userId, letterPaths, res) {
     const options = { upsert: true, new: true, setDefaultsOnInsert: true };
     const letters = await Letters.findOneAndUpdate({ userId }, update, options);
     // If you need to update the User model as well,
-    const user = User.findOneAndUpdate(
+    const user = await User.findOneAndUpdate(
       { _id: userId },
       { letters: letters._id },
       { new: true }

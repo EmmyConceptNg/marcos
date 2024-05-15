@@ -195,10 +195,19 @@ async function updateDatabaseWithLetterPaths(userId, letterPaths, res) {
     // Database update logic
     const update = { $set: { letterPaths } };
     const options = { upsert: true, new: true, setDefaultsOnInsert: true };
-    await Letters.findOneAndUpdate({ userId }, update, options);
+    const letters = await Letters.findOneAndUpdate({ userId }, update, options);
     // If you need to update the User model as well,
+    const user = User.findOneAndUpdate(
+      { _id: userId },
+      { letters: letters._id },
+      { new: true }
+    )
+      .populate("subscriptionPlan")
+      .populate("creditReport")
+      .populate("letters")
+      .select("-password");
     // Don't forget to await the same as above.
-    res.status(200).json({ message: "Dispute letters generated and saved successfully." });
+    res.status(200).json({ user, message: "Dispute letters generated and saved successfully." });
   } catch (dbError) {
     console.error("Error updating the database with letter paths:", dbError);
     res.status(500).json({ message: "Error updating the database with letter paths." });

@@ -77,3 +77,6 @@ export const passwordValidation = Yup.object({
 export const newsletterValidation = Yup.object({
   email: Yup.string().email("Invalid email address").required("Required"),
 });
+export const amountValidation = Yup.object({
+  balance: Yup.number().required("Required").min(5),
+});

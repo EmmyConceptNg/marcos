@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const schema = new mongoose.Schema(
   {
@@ -30,10 +30,14 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Plan",
     },
-     creditReport: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'CreditReport' 
-  },
+    creditReport: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CreditReport",
+    },
+    letters: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Letters",
+    },
     planStartDate: {
       type: Date,
       default: Date.now,
@@ -47,8 +51,9 @@ const schema = new mongoose.Schema(
     id: String,
     proofOfAddress: String,
     ssn: Number,
+    balance: Number,
   },
   { timestamps: true }
 );
 
-export default mongoose.model('User', schema);
+export default mongoose.model("User", schema);

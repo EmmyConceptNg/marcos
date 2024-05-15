@@ -8,6 +8,7 @@ import Deals from "../pages/dashboard/Deals/Index";
 import Learn from "../pages/dashboard/Learn/Index";
 import Support from "../pages/support/Index";
 import SubscriptionSuccess from "../pages/dashboard/Subscription/SubscriptionSuccess";
+import CreditSuccess from "../pages/dashboard/Credit/CreditSuccess";
 
 export const DashboardRoutes = () =>{
     return [
@@ -27,6 +28,7 @@ export const DashboardRoutes = () =>{
           { path: "settings", element: <Settings /> },
           { path: "support", element: <Support /> },
           { path: "subscription/success/:sessionId/:planId", element: <SubscriptionSuccess /> },
+          { path: "credit/success/:sessionId/:amount/:iv", element: <CreditSuccess /> },
         ],
       },
     ];

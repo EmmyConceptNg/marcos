@@ -12,7 +12,6 @@ import axios from "../../api/axios";
 import { loadStripe } from "@stripe/stripe-js";
 import { notify } from "../../utils/Index";
 import { useCallback, useEffect, useState } from "react";
-import { usePlaidLink } from "react-plaid-link";
 
 
 import { Document, Page, pdfjs } from "react-pdf";
@@ -46,7 +45,7 @@ function Overview() {
   const user = useSelector((state) => state.user.details);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [linkToken, setLinkToken] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
+  
   const [itemId, setItemId] = useState(null);
   const [proPlan, setProPlan] = useState(null);
 
@@ -88,53 +87,10 @@ function Overview() {
       });
   };
 
-  // Fetch link_token from server when component mounts
-  useEffect(() => {
-    const fetchLinkToken = async () => {
-      try {
-        const response = await axios.post("/api/plaid/create_link_token", {
-          userId: user?._id,
-        });
-        setLinkToken(response.data.link_token);
-      } catch (error) {
-        console.error("Error fetching link token: ", error);
-      }
-    };
+  
 
-    fetchLinkToken();
-  }, [user?._id]);
 
-  const fetchAccounts = () => {};
-  const onSuccess = useCallback(
-    async (publicToken, metadata) => {
-      // Send the publicToken to your server to exchange for an access token
-      try {
-        const response = await axios.post("/api/plaid/exchange_public_token", {
-          publicToken,
-          userId: user._id,
-        });
-        setAccessToken(response.data.plaid.accessToken);
-        setItemId(response.data.plaid.itemId);
-        dispatch(setUser(response.data.user));
-        navigate("/dashboard");
-
-        fetchAccounts(response.data.accessToken);
-      } catch (error) {
-        console.error("Error exchanging public token: ", error);
-        // Update the UI to show an error message
-        notify("Unable to connect to your bank. Please try again.", "error");
-      }
-    },
-    [navigate, fetchAccounts]
-  );
-
-  const config = {
-    token: linkToken,
-    onSuccess,
-    // Define other callbacks as needed
-  };
-
-  const { open, ready, error } = usePlaidLink(config);
+  
 
   return (
     <>

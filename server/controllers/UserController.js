@@ -9,7 +9,8 @@ export const login = async (req, res) => {
 
   const user = await User.findOne({ email: signdetails.email })
     .populate("subscriptionPlan")
-    .populate("creditReport");
+    .populate("creditReport")
+    .populate("letters");
 
   if (!user) {
     return res.status(404).json({ error: "Email not found" });
@@ -52,6 +53,7 @@ export const loginGoogle = async (req, res) => {
     const user = await User.findOne({ email: signdetails.email })
       .populate("subscriptionPlan")
       .populate("creditReport")
+      .populate("letters")
       .select("-password")
       .lean();
 
@@ -192,6 +194,7 @@ export const updateUser = async (req, res) => {
     User.findByIdAndUpdate({ _id: userId }, { $set: req.body }, { new: true })
       .populate("subscriptionPlan")
       .populate("creditReport")
+      .populate("letters")
       .select("-password")
       .then((user) =>
         res.status(200).json({ user, message: "User Updated Successfully" })

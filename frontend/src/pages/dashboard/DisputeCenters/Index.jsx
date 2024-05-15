@@ -586,7 +586,7 @@ function Attacks({ setType, user }) {
 
   return (
     <>
-      {!user.letters.letterPaths > 0 ? (
+      {!user?.letters?.letterPaths > 0 ? (
         <Box display="flex" alignItems="center" justifyContent="center">
           <Button variant="contained" onClick={() => setType("disputing")}>
             Start new dispute
@@ -612,7 +612,7 @@ function Attacks({ setType, user }) {
                   Documents have been generated
                 </Text>
                 <Text fs="20px" fw="700" color="#131C30">
-                  {`(${user.letters.letterPaths.length} Attachments)`}
+                  {`(${user.letters?.letterPaths?.length} Attachments)`}
                 </Text>
               </Stack>
               <Stack direction="row" spacing={2}>

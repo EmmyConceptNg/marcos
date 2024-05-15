@@ -10,7 +10,8 @@ export const login = async (req, res) => {
   const user = await User.findOne({ email: signdetails.email })
     .populate("subscriptionPlan")
     .populate("creditReport")
-    .populate("letters");
+    .populate("letters")
+      .select("-password")
 
   if (!user) {
     return res.status(404).json({ error: "Email not found" });

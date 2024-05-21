@@ -144,9 +144,15 @@ const queryAccount = (user) => {
       if (detail.label === "Payment Status:") {
         console.log("payment status ");
         const statuses = [detail.data.EQF, detail.data.EXP, detail.data.TUC];
-        if (statuses.some((status) => status === "Collection/Chargeoff")) {
-          hasNegativeDetails = true;
-        }
+       if (
+         statuses.some(
+           (status) =>
+             status.toLowerCase().includes("collection/chargeoff") ||
+             status.toLowerCase().includes("late")
+         )
+       ) {
+         hasNegativeDetails = true;
+       }
       }
 
       // Aggregate details by bureau

@@ -18,6 +18,7 @@ export const login = async (req, res) => {
   }
 
   console.log("signdetails", signdetails.password);
+  console.log("user ", user);
   console.log("user password", user.password);
 
   const passwordConfrimed = bcrypt.compareSync(

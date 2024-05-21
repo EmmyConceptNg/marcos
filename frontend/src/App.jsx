@@ -28,31 +28,31 @@ function App() {
     setLastActivity(Date.now());
   }, []);
 
-  useEffect(() => {
-    const events = ["mousemove", "keydown", "scroll", "click"];
+  // useEffect(() => {
+  //   const events = ["mousemove", "keydown", "scroll", "click"];
 
-    const checkIdleTime = () => {
-      if (Date.now() - lastActivity >= INACTIVITY_THRESHOLD) {
-        handleLogout();
-      }
-    };
+  //   const checkIdleTime = () => {
+  //     if (Date.now() - lastActivity >= INACTIVITY_THRESHOLD) {
+  //       handleLogout();
+  //     }
+  //   };
 
-    // Check inactivity by setting an interval
-    const intervalId = setInterval(checkIdleTime, 1000);
+  //   // Check inactivity by setting an interval
+  //   const intervalId = setInterval(checkIdleTime, 1000);
 
-    // Attach activity event listeners
-    events.forEach((event) => {
-      window.addEventListener(event, handleActivity);
-    });
+  //   // Attach activity event listeners
+  //   events.forEach((event) => {
+  //     window.addEventListener(event, handleActivity);
+  //   });
 
-    return () => {
-      // Clear the interval and event listeners on cleanup
-      clearInterval(intervalId);
-      events.forEach((event) => {
-        window.removeEventListener(event, handleActivity);
-      });
-    };
-  }, [lastActivity, handleActivity, handleLogout]);
+  //   return () => {
+  //     // Clear the interval and event listeners on cleanup
+  //     clearInterval(intervalId);
+  //     events.forEach((event) => {
+  //       window.removeEventListener(event, handleActivity);
+  //     });
+  //   };
+  // }, [lastActivity, handleActivity, handleLogout]);
 
   return (
     <>

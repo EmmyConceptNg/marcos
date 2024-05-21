@@ -80,6 +80,7 @@ mongoose
   .then(() => {
     console.log("================================================");
     console.log(`============== Connected to MongoDB ==============`);
+    console.log('JWTSECRET',process.env.JWTSECRET);
     
     app.listen(PORT, () => {
       console.log("================================================");

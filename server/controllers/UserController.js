@@ -11,7 +11,7 @@ export const login = async (req, res) => {
     .populate("subscriptionPlan")
     .populate("creditReport")
     .populate("letters")
-    .select("-password");
+    
 
   if (!user) {
     return res.status(404).json({ error: "Email not found" });

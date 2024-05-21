@@ -47,13 +47,14 @@ export default function Login() {
         if (response.data.user.emailVerified === false) {
           navigate("/verification/link/email");
         } else {
-           const lastUrl = localStorage.getItem("lastUrl");
-          if (lastUrl) {
-            navigate(lastUrl);
-            localStorage.removeItem("lastUrl");
-          } else {
-            navigate("/dashboard");
-          }
+          navigate("/dashboard");
+          //  const lastUrl = localStorage.getItem("lastUrl");
+          // if (lastUrl) {
+          //   navigate(lastUrl);
+          //   localStorage.removeItem("lastUrl");
+          // } else {
+          //   navigate("/dashboard");
+          // }
         }
       })
       .catch((error) => {

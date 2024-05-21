@@ -17,9 +17,9 @@ export const login = async (req, res) => {
     return res.status(404).json({ error: "Email not found" });
   }
 
-  console.log("signdetails", signdetails.password);
-  console.log("user ", user);
-  console.log("user password", user.password);
+  // console.log("signdetails", signdetails.password);
+  // console.log("user ", user);
+  // console.log("user password", user.password);
 
   const passwordConfrimed = bcrypt.compareSync(
     signdetails.password,

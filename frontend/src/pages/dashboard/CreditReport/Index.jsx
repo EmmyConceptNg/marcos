@@ -19,6 +19,8 @@ import Button from "../../../components/Button";
 import { notify } from "../../../utils/Index";
 import axios from "../../../api/axios";
 import { setUser } from "../../../redux/UserReducer";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
 
 export default function CreditReport() {
   const dispatch = useDispatch()
@@ -62,9 +64,20 @@ export default function CreditReport() {
 
   }, [user]);
 
+  const navigate = useNavigate()
 
 
   const handleUploadFromComputer = () => {
+    if(!user.proofOfAddress || !user.id){
+      notify('You need to upload a proof of address and a valid ID card', 'info');
+      navigate("/dashboard/settings?proof=true");
+      return false;
+    }
+    if(!user.ssn){
+      notify('You need to enter your Social Security Number', 'info');
+      navigate("/dashboard/settings");
+      return false;
+    }
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".pdf,.html";
@@ -105,13 +118,15 @@ export default function CreditReport() {
   
   return (
     <Box>
+      <ToastContainer />
       <Helmet>
         <title>Credit Report</title>
       </Helmet>
       {user?.creditReport ? (
         <Box>
           <Stack direction="row" justifyContent="flex-end" mb={5}>
-            <Button loading={isUploading}
+            <Button
+              loading={isUploading}
               variant="contained"
               width="200px"
               dropdown
@@ -126,7 +141,7 @@ export default function CreditReport() {
                 },
               ]}
             >
-              Upload New Report 
+              Upload New Report
             </Button>
           </Stack>
           <Stack direction="row" justifyContent="space-between">

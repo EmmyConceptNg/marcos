@@ -19,6 +19,7 @@ import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import ProgressMeter from "../../components/loader";
 import ProgressLoader from "../../components/loader";
 import { mapToRowsStructure } from "../../utils/helper";
+import { ToastContainer } from "react-toastify";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
@@ -99,7 +100,7 @@ function Overview() {
       </Text>
 
       {/* Update Profile */}
-      {!user?.ssn && (
+      {!user?.ssn || !user.proofOfAddress || !user.id ? (
         <Box
           sx={{
             backgroundImage: `url('/assets/images/bg-dash.svg')`,
@@ -132,7 +133,7 @@ function Overview() {
             </Button>
           </Stack>
         </Box>
-      )}
+      ):(null)}
 
       {/* {proPlan && user?.subscriptionPlan.name === "Basic" && ( */}
         <Box
@@ -191,6 +192,10 @@ function Disputes() {
  
 
   const handleUploadFromComputer = () => {
+    if(!user.proofOfAddress || !user.id){
+      notify('You need to upload a proof of address and a valid ID card', 'info');
+      navigate("/dashboard/settings?proof=true");
+    }
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".pdf,.html";
@@ -264,6 +269,7 @@ const [report, setReport] = useState([])
 
   return (
     <>
+    <ToastContainer />
       <Text color="#131C30" fs="25px" fw="700">
         Disputes
       </Text>

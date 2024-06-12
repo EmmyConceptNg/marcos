@@ -1,5 +1,5 @@
 import { Box, Tab, Tabs, styled } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Text from "../../components/Text";
 import Profile from "./Profile";
 import Preferences from "./Preferences";
@@ -7,13 +7,28 @@ import Security from "./Security";
 import { Subscription } from "./Subscription";
 import Notification from "./Notifications";
 import Documents from "./Documents";
+import { useLocation } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
 
 export default function Settings() {
-  const [value, setValue] = useState(0);
+
+  const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+   const proof = searchParams.get("proof");
+
+   const initialTab = proof === "true" ? 1 : 0;
+
+  const [value, setValue] = useState(initialTab);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
+
+   useEffect(() => {
+     if (proof === "true") {
+       setValue(1);
+     }
+   }, [proof]);
 
   return (
     <Box
@@ -22,6 +37,7 @@ export default function Settings() {
       p={{ sm: 3, xs: 1 }}
       borderRadius="15px"
     >
+      <ToastContainer />
       <Tabs
         value={value}
         onChange={handleChange}

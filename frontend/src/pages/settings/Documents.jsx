@@ -1,30 +1,20 @@
-import {
-  Box,
-  FormControlLabel,
-  Grid,
-  Stack,
-  Switch,
-  styled,
-} from "@mui/material";
-
-import Input from "../../components/Input";
-import Button from "../../components/Button";
-import Text from "../../components/Text";
+import React from "react";
+import { Box, Stack, Button as MuiButton } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "../../api/axios";
+import axios, { getImageUrl } from "../../api/axios";
 import PropTypes from "prop-types";
 import { notify } from "../../utils/Index";
-import { useState } from "react";
 import { setUser } from "../../redux/UserReducer";
+import Text from "../../components/Text";
+import { ToastContainer } from "react-toastify";
 
 export default function Documents() {
   const user = useSelector((state) => state.user.details);
-
   const dispatch = useDispatch();
 
   return (
     <Box mt={3}>
-      {/* Preferences Form */}
+      <ToastContainer />
       <Stack
         direction={{ sm: "row", xs: "column" }}
         spacing={2}
@@ -41,6 +31,7 @@ export default function Documents() {
 
 function ID({ user }) {
   const dispatch = useDispatch();
+
   const handleIDCard = () => {
     const fileInput = document.createElement("input");
     fileInput.type = "file";
@@ -49,30 +40,30 @@ function ID({ user }) {
     fileInput.onchange = async (e) => {
       const file = e.target.files[0];
       if (file) {
-        const fileType = file.type;
-
         const formData = new FormData();
         formData.append("idCard", file);
 
-        await axios
-          .post(`/api/auth/upload-id/${user?._id}`, formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          })
-          .then((response) => {
-            notify(response.data.success, "success");
-            dispatch(setUser(response.data.user));
-            //  dispatch(setUser(response.data.user));
-          })
-          .catch((error) => {
-            notify(error.response?.data.error, "error");
-          });
+        try {
+          const response = await axios.post(
+            `/api/auth/upload-id/${user?._id}`,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+          notify(response.data.success, "success");
+          dispatch(setUser(response.data.user));
+        } catch (error) {
+          notify(error.response?.data.error, "error");
+        }
       }
     };
 
     fileInput.click();
   };
+
   return (
     <Box width="100%">
       <Box
@@ -82,9 +73,10 @@ function ID({ user }) {
         borderRadius="15px"
         display="flex"
         justifyContent="center"
+        alignItems="center"
       >
         {!user?.id ? (
-          <Stack spacing={2} justifyContent="center" alignItems="flex-start">
+          <Stack spacing={2} justifyContent="center" alignItems="center">
             <Text
               color="#131C30"
               fs={{ sm: "16px", xs: "16px" }}
@@ -93,36 +85,34 @@ function ID({ user }) {
             >
               Please Upload a valid ID card
             </Text>
-            <Button
-              variant="contained"
-              width="150px"
-              onClick={() => handleIDCard()}
-            >
+            <MuiButton variant="contained" width="150px" onClick={handleIDCard}>
               Upload
-            </Button>
+            </MuiButton>
           </Stack>
         ) : (
-          <Box component="img" src={user.id} />
+          <img src={user.id} alt="User ID" height="300px" width="100%" />
         )}
       </Box>
       {user?.id && (
         <Box display="flex" justifyContent="center" mt={3}>
-          <Button
+          <MuiButton
             variant="contained"
             width="150px"
             height="30px"
-            onClick={() => handleIDCard()}
+            onClick={handleIDCard}
           >
             Replace
-          </Button>
+          </MuiButton>
         </Box>
       )}
     </Box>
   );
 }
+
 function Address({ user }) {
   const dispatch = useDispatch();
-  const handleIDCard = () => {
+
+  const handleProofOfAddress = () => {
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".png,.jpeg,.jpg";
@@ -133,25 +123,27 @@ function Address({ user }) {
         const formData = new FormData();
         formData.append("address", file);
 
-        await axios
-          .post(`/api/auth/upload-address/${user?._id}`, formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          })
-          .then((response) => {
-            notify(response.data.success, "success");
-            dispatch(setUser(response.data.user));
-            //  dispatch(setUser(response.data.user));
-          })
-          .catch((error) => {
-            notify(error.response?.data.error, "error");
-          });
+        try {
+          const response = await axios.post(
+            `/api/auth/upload-address/${user?._id}`,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+          notify(response.data.success, "success");
+          dispatch(setUser(response.data.user));
+        } catch (error) {
+          notify(error.response?.data.error, "error");
+        }
       }
     };
 
     fileInput.click();
   };
+
   return (
     <Box width="100%">
       <Box
@@ -161,9 +153,10 @@ function Address({ user }) {
         borderRadius="15px"
         display="flex"
         justifyContent="center"
+        alignItems="center"
       >
         {!user?.proofOfAddress ? (
-          <Stack spacing={2} justifyContent="center" alignItems="flex-start">
+          <Stack spacing={2} justifyContent="center" alignItems="center">
             <Text
               color="#131C30"
               fs={{ sm: "16px", xs: "16px" }}
@@ -172,35 +165,42 @@ function Address({ user }) {
             >
               Please Upload a proof of address
             </Text>
-            <Button
+            <MuiButton
               variant="contained"
               width="150px"
-              onClick={() => handleIDCard()}
+              onClick={handleProofOfAddress}
             >
               Upload
-            </Button>
+            </MuiButton>
           </Stack>
         ) : (
-          <Box component="img" src={user.proofOfAddress} />
+          <img
+            src={user.proofOfAddress}
+            alt="Proof of Address"
+            height="300px"
+            width="100%"
+          />
         )}
       </Box>
       {user?.proofOfAddress && (
         <Box display="flex" justifyContent="center" mt={3}>
-          <Button
+          <MuiButton
             variant="contained"
             width="150px"
             height="30px"
-            onClick={() => handleIDCard()}
+            onClick={handleProofOfAddress}
           >
             Replace
-          </Button>
+          </MuiButton>
         </Box>
       )}
     </Box>
   );
 }
+
 function Signature({ user }) {
   const dispatch = useDispatch();
+
   const handleSignature = () => {
     const fileInput = document.createElement("input");
     fileInput.type = "file";
@@ -212,25 +212,27 @@ function Signature({ user }) {
         const formData = new FormData();
         formData.append("signature", file);
 
-        await axios
-          .post(`/api/auth/upload-signature/${user?._id}`, formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          })
-          .then((response) => {
-            notify(response.data.success, "success");
-            dispatch(setUser(response.data.user));
-            //  dispatch(setUser(response.data.user));
-          })
-          .catch((error) => {
-            notify(error.response?.data.error, "error");
-          });
+        try {
+          const response = await axios.post(
+            `/api/auth/upload-signature/${user?._id}`,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+          notify(response.data.success, "success");
+          dispatch(setUser(response.data.user));
+        } catch (error) {
+          notify(error.response?.data.error, "error");
+        }
       }
     };
 
     fileInput.click();
   };
+
   return (
     <Box width="100%">
       <Box
@@ -240,9 +242,10 @@ function Signature({ user }) {
         borderRadius="15px"
         display="flex"
         justifyContent="center"
+        alignItems="center"
       >
         {!user?.signaturePath ? (
-          <Stack spacing={2} justifyContent="center" alignItems="flex-start">
+          <Stack spacing={2} justifyContent="center" alignItems="center">
             <Text
               color="#131C30"
               fs={{ sm: "16px", xs: "16px" }}
@@ -251,28 +254,33 @@ function Signature({ user }) {
             >
               Please Upload a signature
             </Text>
-            <Button
+            <MuiButton
               variant="contained"
               width="150px"
-              onClick={() => handleSignature()}
+              onClick={handleSignature}
             >
               Upload
-            </Button>
+            </MuiButton>
           </Stack>
         ) : (
-          <Box component="img" src={user.signaturePath} />
+          <img
+            src={user.signaturePath}
+            alt="Signature"
+            height="300px"
+            width="100%"
+          />
         )}
       </Box>
       {user?.signaturePath && (
         <Box display="flex" justifyContent="center" mt={3}>
-          <Button
+          <MuiButton
             variant="contained"
             width="150px"
             height="30px"
-            onClick={() => handleSignature()}
+            onClick={handleSignature}
           >
             Replace
-          </Button>
+          </MuiButton>
         </Box>
       )}
     </Box>
@@ -280,11 +288,11 @@ function Signature({ user }) {
 }
 
 ID.propTypes = {
-  user: PropTypes.object,
+  user: PropTypes.object.isRequired,
 };
 Address.propTypes = {
-  user: PropTypes.object,
+  user: PropTypes.object.isRequired,
 };
 Signature.propTypes = {
-  user: PropTypes.object,
+  user: PropTypes.object.isRequired,
 };

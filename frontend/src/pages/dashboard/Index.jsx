@@ -194,7 +194,18 @@ function Disputes() {
   const handleUploadFromComputer = () => {
     if(!user.proofOfAddress || !user.id){
       notify('You need to upload a proof of address and a valid ID card', 'info');
-      navigate("/dashboard/settings?proof=true");
+        setTimeout(() => {
+          navigate("/dashboard/settings?proof=true");
+        }, 2000);
+
+      return false;
+    }
+    if (!user.ssn) {
+      notify("You need to enter your Social Security Number", "info");
+      setTimeout(() => {
+        navigate("/dashboard/settings?redirect=/dashboard");
+      }, 2000);
+      return false;
     }
     const fileInput = document.createElement("input");
     fileInput.type = "file";
@@ -452,7 +463,20 @@ const [report, setReport] = useState([])
             <Button
               variant="contained"
               width="150px"
-              dropdown
+              dropdown onClick={() => {
+               if (!user.proofOfAddress || !user.id) {
+                 notify(
+                   "You need to upload a proof of address and a valid ID card",
+                   "info"
+                 );
+
+                  setTimeout(() => {
+                    navigate("/dashboard/settings?proof=true");
+                  }, 2000);
+
+                 return false;
+               }
+              }}
               dropdownItems={[
                 {
                   text: "Upload from Computer",

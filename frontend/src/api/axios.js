@@ -8,11 +8,13 @@ if (window.location.origin.includes("localhost")) {
   baseURL = "https://marcos-90gs.onrender.com";
 }
 
-export default axios.create({
+const instance = axios.create({
   baseURL,
 });
 
+export default instance;
+
 export const getImageUrl = (imagePath) => {
   // Construct full URL for retrieving images
-  return `${baseURL}/api/user/${imagePath}`;
+  return `${baseURL}/images/${imagePath}`;
 };

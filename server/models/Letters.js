@@ -11,6 +11,7 @@ const LettersSchema = new mongoose.Schema(
       {
         bureau: String,
         path: String,
+        content : String
       },
     ],
   },

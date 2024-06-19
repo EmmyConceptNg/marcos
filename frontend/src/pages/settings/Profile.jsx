@@ -10,11 +10,16 @@ import axios from "../../api/axios";
 import { setUser } from "../../redux/UserReducer";
 import { notify } from "../../utils/Index";
 import { ToastContainer } from "react-toastify";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function Profile() {
 
   const dispatch = useDispatch()
   const user = useSelector(state => state.user.details)
+
+    const location = useLocation();
+    const navigate = useNavigate();
+
   const initialValues = {
     fullName: user?.fullName ??'',
     username: user?.username ?? '',
@@ -66,26 +71,36 @@ const fileInputRef = useRef(null);
     }
   };
 
+const handleUpdate = (values, actions) => {
 
-  const handleUpdate = (values, actions) => {
-    actions.setSubmitting(true);
+  
+  actions.setSubmitting(true);
 
-    axios
-      .post(`/api/auth/update/${user?._id}`, values, {
-        headers: { "Content-Type": "application/json" },
-      })
-      .then((response) => {
-        console.log(response.data.user);
-        dispatch(setUser(response.data.user));
-        notify(response?.data?.message, "success");
+  axios
+    .post(`/api/auth/update/${user?._id}`, values, {
+      headers: { "Content-Type": "application/json" },
+    })
+    .then((response) => {
+      console.log(response.data.user);
+      dispatch(setUser(response.data.user));
+      notify(response?.data?.message, "success");
 
-      })
-      .catch((error) => {
-        console.log(error);
-        notify(error?.response?.data?.error, "error");
-      })
-      .finally(() => actions.setSubmitting(false));
-  };
+      const searchParams = new URLSearchParams(location.search);
+      const redirectUrl = searchParams.get('redirect');
+      
+      if (redirectUrl) {
+        setTimeout(() => {
+          navigate(redirectUrl);
+        }, 1000); // 1 seconds delay
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+      notify(error?.response?.data?.error, "error");
+    })
+    .finally(() => actions.setSubmitting(false));
+};
+
 
 
   return (
@@ -135,6 +150,7 @@ const fileInputRef = useRef(null);
                     placeholder: "Charlene Reed ",
                     required: false,
                     name: "fullName",
+                    readOnly: true,
                   },
                   {
                     label: "User Name",
@@ -148,6 +164,7 @@ const fileInputRef = useRef(null);
                     type: "email",
                     required: false,
                     name: "email",
+                    readOnly: true,
                   },
                   {
                     label: "Phone",
@@ -178,7 +195,8 @@ const fileInputRef = useRef(null);
                   {
                     label: "Social Security Number",
                     placeholder: "SSN",
-                    required: true, type:"number",
+                    required: true,
+                    type: "number",
                     name: "ssn",
                   },
                   {
@@ -198,17 +216,20 @@ const fileInputRef = useRef(null);
                     placeholder: "USA",
                     required: false,
                     name: "country",
+                    defaultValue: "USA",
                   },
                 ].map((item, index) => (
                   <Grid item md={6} xs={12} key={index} mb={{ xs: 5, md: 0 }}>
                     <Input
                       name={item.name}
+                      readOnly={item?.readOnly}
                       height="45px"
                       label={item.label}
                       required={item.required}
                       placeholder={item.placeholder}
                       aria-label={item.label}
                       type={item.type}
+                      defaultValue={item?.defaultValue}
                     />
                   </Grid>
                 ))}

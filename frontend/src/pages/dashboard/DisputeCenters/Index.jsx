@@ -24,6 +24,7 @@ import moment from "moment";
 import NoBalanceModal from "../../../components/modal/NoBalanceModal";
 import { setUser } from "../../../redux/UserReducer";
 import LetterModal from "../../../components/modal/LetterModal";
+import { useNavigate } from "react-router-dom";
 
 export default function DisputeCenters() {
   const [type, setType] = useState("disputing");
@@ -35,9 +36,23 @@ export default function DisputeCenters() {
   const [checkboxStates, setCheckboxStates] = useState({});
 
   const dispatch = useDispatch();
+  const navigate = useNavigate()
 
   const handleAttackNow = async () => {
     // Compile the selected disputes, accounts, and inquiries
+
+    // Check if any checkboxes are selected
+    if (!user.ssn) {
+      notify("Error: Please update your personal details", "error");
+      setTimeout(() => {
+        navigate("/dashboard/settings");
+      }, 2000);
+      return false;
+    }
+    if (!isAnyCheckboxSelected()) {
+      notify("Error: No items selected for the attack.", "error");
+      return false;
+    }
 
     setAttacking(true);
     const selectedDisputes = disputes.filter(
@@ -96,12 +111,36 @@ export default function DisputeCenters() {
       dispatch(setUser(response.data.user));
       notify("Success: Letters have been generated and sent!", "success");
 
+      
+        setTimeout(() => {
+          setType('attacks');
+        }, 1000); 
+      
       setAttacking(false);
     } catch (error) {
       console.error("Attack failed:", error);
       notify("Error: The attack could not be completed.", "error");
       setAttacking(false);
     }
+  };
+
+  // Helper function to check if any checkbox is selected
+  const isAnyCheckboxSelected = () => {
+    return (
+      disputes.some((_, index) =>
+        ["EQF", "EXP", "TUC"].some(
+          (bureau) => checkboxStates.disputes[index][bureau]
+        )
+      ) ||
+      accounts.some((_, index) =>
+        ["EQF", "EXP", "TUC"].some(
+          (bureau) => checkboxStates.accounts[index][bureau]
+        )
+      ) ||
+      ["EQF", "EXP", "TUC"].some((bureau) =>
+        checkboxStates.inquiries[bureau]?.some((checked) => checked)
+      )
+    );
   };
 
   return (
@@ -337,7 +376,6 @@ function flattenDetails(details) {
 function Disputes({
   handleAttackNow,
   attacking,
-  setAttacking,
   disputes,
   setDisputes,
   inquiries,
@@ -471,6 +509,7 @@ function Disputes({
 
   return (
     <Box>
+      <ToastContainer />
       <Stack
         direction="column"
         spacing={{ sm: 4, xs: 1 }}
@@ -815,7 +854,7 @@ function Disputes({
         <Button
           variant="contained"
           loading={attacking}
-          onClick={() => handleAttackNow()}
+          onClick={handleAttackNow}
         >
           {attacking ? "" : "Start New Round"}
         </Button>
@@ -1208,8 +1247,7 @@ function RoundMenu({ user, handleAttackNow, attacking }) {
                 handleAttackNow();
               }}
             >
-              Start Round
-              {user?.creditReport?.round ? user?.creditReport?.round + 1 : 1}
+              {`Start Round ${user?.creditReport?.round ? user?.creditReport?.round + 1 : 1}`}
             </Text>
           ) : (
             "Attacking, Please wait..."

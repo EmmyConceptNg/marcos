@@ -254,52 +254,31 @@ export const updateImage = async (req, res) => {
     res.status(400).json(error.message);
   }
 };
-export const updateId = async (req, res) => {
-  const { userId } = req.params;
+
+
+const updateUserField = async (userId, field, filePath, res) => {
   try {
-    User.findByIdAndUpdate(
-      { _id: userId },
-      {
-        id:
-          process.env.SERVER_URL +
-          "/images/" +
-          req.file.filename.replace(/\\/g, "/"),
-      },
-      { new: true }
-    )
+    const updateData = {};
+    updateData[field] = `${process.env.SERVER_URL}/images/${filePath.replace(/\\/g, "/")}`;
+
+    const user = await User.findByIdAndUpdate(userId, updateData, { new: true })
       .populate("subscriptionPlan")
       .populate("creditReport")
-      .select("-password")
-      .then((user) => {
-        res.status(200).json({ user });
-      });
+      .populate("letters")
+      .select("-password"); 
+
+    res.status(200).json({ user });
   } catch (error) {
-    res.status(400).json(error.message);
+    res.status(400).json({ error: error.message });
   }
 };
-export const updateProofOfAddress = async (req, res) => {
-  const { userId } = req.params;
-  try {
-    User.findByIdAndUpdate(
-      { _id: userId },
-      {
-        proofOfAddress:
-          process.env.SERVER_URL +
-          "/images/" +
-          req.file.filename.replace(/\\/g, "/"),
-      },
-      { new: true }
-    )
-      .populate("subscriptionPlan")
-      .populate("creditReport")
-      .select("-password")
-      .then((user) => {
-        res.status(200).json({ user });
-      });
-  } catch (error) {
-    res.status(400).json(error.message);
-  }
-};
+
+export const updateId = (req, res) =>
+  updateUserField(req.params.userId, "id", req.file.filename, res);
+export const updateProofOfAddress = (req, res) =>
+  updateUserField(req.params.userId, "proofOfAddress", req.file.filename, res);
+export const updateSignature = (req, res) =>
+  updateUserField(req.params.userId, "signaturePath", req.file.filename, res);
 
 const html = (user) => {
   return ` <center>

@@ -38,10 +38,10 @@ export default function Input({
   label,
   
   placeholder, onInput, inputProp,
-  
+  readOnly=false,
   name, height="44px",
   width, type="text",  details,
-  sx,
+  sx, defaultValue
 }) {
 
   const [showPassword, setShowPassword] = useState(false);
@@ -76,6 +76,7 @@ export default function Input({
       <InputField
         {...field}
         onInput={onInput}
+        readOnly={readOnly}
         inputProp={inputProp}
         height={height}
         type={inputType}
@@ -85,6 +86,7 @@ export default function Input({
         required={required}
         id={id}
         isPin={isPin}
+        defaultValue={defaultValue}
         endAdornment={
           isPasswordField ? (
             <InputAdornment position="end">
@@ -129,4 +131,6 @@ Input.propTypes = {
   endAdornment: PropTypes.element,
   details: PropTypes.string,
   sx: PropTypes.object,
+  readOnly: PropTypes.bool,
+  defaultValue: PropTypes.string,
 };

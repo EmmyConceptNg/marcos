@@ -2,10 +2,10 @@ import CreditReport from "../models/CreditReport.js";
 import fs from "fs";
 import cheerio from "cheerio";
 import User from "../models/User.js";
+import pdf from "pdf-parse-debugging-disabled";
 
 // CreditReport controller
 export const getCreditReport = async (req, res) => {
-  // Handle GET request for CreditReport
   try {
     const items = await CreditReport.find();
     res.json(items);
@@ -15,7 +15,6 @@ export const getCreditReport = async (req, res) => {
 };
 
 export const createCreditReport = async (req, res) => {
-  // Handle POST request to create CreditReport
   try {
     const newItem = new CreditReport(req.body);
     const savedItem = await newItem.save();
@@ -29,7 +28,11 @@ export const uploadRecord = async (req, res) => {
   const filePath = req.file.path;
   const { userId } = req.params;
 
-  // Check file extension and parse accordingly
+  if (!fs.existsSync(filePath)) {
+    console.error(`File not found at path: ${filePath}`);
+    return res.status(400).json({ message: "File not found" });
+  }
+
   if (
     req.file.mimetype === "text/html" ||
     req.file.originalname.endsWith(".html")
@@ -39,49 +42,47 @@ export const uploadRecord = async (req, res) => {
         console.error(err);
         return res.status(500).send("Error reading HTML file");
       }
-
-      // Parse the HTML data
-
       parseHtmlAndStore(data, userId, res);
-
-      // Clean up the temp file
-      fs.unlink(filePath, (err) => {
-        if (err) console.error("Error deleting temp file", err);
-      });
-
-      // res.send("File processed and data stored in database");
+      cleanUpTempFile(filePath);
     });
+  } else if (req.file.mimetype === "application/pdf") {
+    try {
+      const textContent = await convertPdfToText(filePath);
+      if (textContent && textContent.trim().length > 0) {
+        parsePdfAndStore(textContent, userId, res);
+      } else {
+        console.error("Invalid text content extracted from PDF");
+        res.status(500).send("Error converting PDF file: Invalid content");
+      }
+      cleanUpTempFile(filePath);
+    } catch (error) {
+      console.error("Error converting PDF file", error);
+      res.status(500).send("Error converting PDF file");
+    }
   } else {
-    res.status(400).send("Unsupported file type");
+    res.status(400).json({ message: "Unsupported file type" });
   }
+};
+
+const convertPdfToText = async (pdfPath) => {
+  const dataBuffer = fs.readFileSync(pdfPath);
+  const data = await pdf(dataBuffer);
+  return data.text;
 };
 
 const parseHtmlAndStore = async (htmlContent, userId, res) => {
   const $ = cheerio.load(htmlContent);
   let creditReportData = {};
 
-  // Iterate over each 'rpt_content_wrapper' class
   $(".rpt_content_wrapper").each((_, wrapper) => {
-    // Find the header and its text
     const header = $(wrapper).find(".rpt_fullReport_header");
     let key = header.find("span").first().text().trim();
-    if (!key) {
-      key = header.text().trim();
-    }
-
-    // Skip if no key is found
-    if (!key) {
-      console.log("No key found for this wrapper, skipping...");
-      return;
-    }
+    if (!key) key = header.text().trim();
+    if (!key) return;
 
     key = toSnakeCase(key);
-
-    // Special treatment for 'Account History'
     if (key === "account_history") {
       let accounts = [];
-
-      // Process each sub-header as an account
       $(wrapper)
         .find(".sub_header.ng-binding.ng-scope")
         .each((_, subHeader) => {
@@ -90,25 +91,17 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
           const table = $(subHeader).next(
             ".re-even-odd.rpt_content_table.rpt_content_header.rpt_table4column"
           );
-
-          // Process each row of the account's table
           const rows = $(table).find("tr:not(:first-child)");
           rows.each((_, row) => {
             const label = $(row).find("td.label").text().trim();
             const tucData = $(row).find("td").eq(1).text().trim();
             const expData = $(row).find("td").eq(2).text().trim();
             const eqfData = $(row).find("td").eq(3).text().trim();
-
             accountData.push({
-              label: label,
-              data: {
-                TUC: tucData,
-                EXP: expData,
-                EQF: eqfData,
-              },
+              label,
+              data: { TUC: tucData, EXP: expData, EQF: eqfData },
             });
           });
-
           if (accountData.length > 0) {
             accounts.push({
               accountName: toSnakeCase(accountKey),
@@ -116,13 +109,9 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
             });
           }
         });
-
-      // Add the accounts array to the creditReportData object
       creditReportData[key] = accounts;
     } else if (key === "public_information") {
       let information = [];
-
-      // Process each sub-header as an account
       $(wrapper)
         .find(".sub_header")
         .each((_, subHeader) => {
@@ -131,25 +120,17 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
           const table = $(subHeader).next(
             ".re-even-odd.rpt_content_table.rpt_content_header.rpt_table4column"
           );
-
-          // Process each row of the account's table
           const rows = $(table).find("tr:not(:first-child)");
           rows.each((_, row) => {
             const label = $(row).find("td.label").text().trim();
             const tucData = $(row).find("td").eq(1).text().trim();
             const expData = $(row).find("td").eq(2).text().trim();
             const eqfData = $(row).find("td").eq(3).text().trim();
-
             accountData.push({
-              label: label,
-              data: {
-                TUC: tucData,
-                EXP: expData,
-                EQF: eqfData,
-              },
+              label,
+              data: { TUC: tucData, EXP: expData, EQF: eqfData },
             });
           });
-
           if (accountData.length > 0) {
             information.push({
               infoType: accountKey,
@@ -157,12 +138,8 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
             });
           }
         });
-
-      // Add the accounts array to the creditReportData object
       creditReportData[key] = information;
     } else if (key === "inquiries") {
-      console.log("inquires");
-
       const sectionData = [];
       $(wrapper)
         .find(".rpt_content_table.rpt_content_header")
@@ -174,17 +151,11 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
             const date_of_enquiry = $(row).find("td").eq(2).text().trim();
             const credit_bereau = $(row).find("td").eq(3).text().trim();
             sectionData.push({
-              creditor_name: creditor_name,
-              data: {
-                type_of_business: type_of_business,
-                date_of_enquiry: date_of_enquiry,
-                credit_bereau: credit_bereau,
-              },
+              creditor_name,
+              data: { type_of_business, date_of_enquiry, credit_bereau },
             });
           });
         });
-
-      // Add the general section data to creditReportData under the appropriate key
       creditReportData[key] = sectionData;
     } else {
       const sectionData = [];
@@ -198,30 +169,22 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
             const expData = $(row).find("td").eq(2).text().trim();
             const eqfData = $(row).find("td").eq(3).text().trim();
             sectionData.push({
-              label: label,
-              data: {
-                TUC: tucData,
-                EXP: expData,
-                EQF: eqfData,
-              },
+              label,
+              data: { TUC: tucData, EXP: expData, EQF: eqfData },
             });
           });
         });
-
-      // Add the general section data to creditReportData under the appropriate key
       creditReportData[key] = sectionData;
     }
   });
 
-  // Attempt to update the database with the parsed data
   try {
     const document = await CreditReport.findOneAndUpdate(
-      { userId: userId },
-      { $set: { creditReportData: creditReportData } },
+      { userId },
+      { $set: { creditReportData }, $inc: { round: 1 } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Update the user with the credit report reference
     const user = await User.findOneAndUpdate(
       { _id: userId },
       { $set: { creditReport: document._id } },
@@ -231,14 +194,148 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
       .populate("creditReport")
       .select("-password");
 
-    // Respond to the request with user and document data
-    res.status(200).json({ user: user, report: document });
+    res.status(200).json({ user, report: document });
   } catch (error) {
     console.error("Error saving credit report data: ", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
-const toSnakeCase = (s) => {
-  return s.toLowerCase().replace(/\s+/g, "_");
+const parsePdfAndStore = async (textContent, userId, res) => {
+  const lines = textContent.split("\n").map((line) => line.trim());
+  let creditReportData = {};
+
+  let currentSection = null;
+  let accounts = [];
+  let publicInformation = [];
+  let inquiries = [];
+  let otherSectionData = [];
+
+  lines.forEach((line) => {
+    if (line.match(/TransUnion|Experian|Equifax/)) {
+      currentSection = "threeBureauData";
+      return;
+    }
+
+    if (line.startsWith("Account History")) {
+      currentSection = "account_history";
+      if (!creditReportData.account_history) {
+        creditReportData.account_history = [];
+      }
+      return;
+    }
+
+    if (line.startsWith("Public Information")) {
+      currentSection = "public_information";
+      return;
+    }
+
+    if (line.startsWith("Inquiries")) {
+      currentSection = "inquiries";
+      return;
+    }
+
+    if (currentSection === "account_history") {
+      handleAccountHistoryPdf(line, accounts);
+    } else if (currentSection === "public_information") {
+      handlePublicInformationPdf(line, publicInformation);
+    } else if (currentSection === "inquiries") {
+      handleInquiriesPdf(line, inquiries);
+    } else if (currentSection === "threeBureauData") {
+      handleThreeBureauDataPdf(line, otherSectionData);
+    }
+  });
+
+  creditReportData["account_history"] = accounts;
+  creditReportData["public_information"] = publicInformation;
+  creditReportData["inquiries"] = inquiries;
+
+  try {
+    const document = await CreditReport.findOneAndUpdate(
+      { userId },
+      { $set: { creditReportData }, $inc: { round: 1 } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    const user = await User.findOneAndUpdate(
+      { _id: userId },
+      { $set: { creditReport: document._id } },
+      { new: true }
+    )
+      .populate("subscriptionPlan")
+      .populate("creditReport")
+      .select("-password");
+
+    res.status(200).json({ user, report: document });
+  } catch (error) {
+    console.error("Error saving credit report data: ", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
+
+const handleAccountHistoryPdf = (line, accounts) => {
+  if (
+    line.startsWith("FIDELITY SVG") ||
+    line.startsWith("CALIBER") ||
+    line.startsWith("BANK OF AMERICA") ||
+    line.startsWith("GM FINANCIAL") ||
+    line.startsWith("SYNCB/BMRT") ||
+    line.startsWith("ALDOUS")
+  ) {
+    accounts.push({ accountName: line, details: [] });
+  } else if (line) {
+    const lastIndex = accounts.length - 1;
+    if (lastIndex >= 0) {
+      accounts[lastIndex].details.push(line);
+    }
+  }
+};
+
+const handlePublicInformationPdf = (line, publicInformation) => {
+  if (!publicInformation.length) publicInformation.push({});
+  const infoSection = publicInformation[publicInformation.length - 1];
+
+  if (!infoSection.infoType) {
+    infoSection.infoType = line;
+  } else {
+    if (!infoSection.infoDetails) infoSection.infoDetails = [];
+    const [label, tucData, expData, eqfData] = line.split(/\s{2,}/);
+    infoSection.infoDetails.push({
+      label: label.trim(),
+      data: {
+        TUC: tucData?.trim(),
+        EXP: expData?.trim(),
+        EQF: eqfData?.trim(),
+      },
+    });
+  }
+};
+
+const handleInquiriesPdf = (line, inquiries) => {
+  const [creditorName, typeOfBusiness, dateOfEnquiry, creditBereau] =
+    line.split(/\s{2,}/);
+  inquiries.push({
+    creditor_name: creditorName.trim(),
+    data: {
+      type_of_business: typeOfBusiness?.trim(),
+      date_of_enquiry: dateOfEnquiry?.trim(),
+      credit_bureau: creditBereau?.trim(),
+    },
+  });
+};
+
+const handleThreeBureauDataPdf = (line, otherSectionData) => {
+  const [label, tucData, expData, eqfData] = line.split(/\s{2,}/);
+  otherSectionData.push({
+    label: label.trim(),
+    data: { TUC: tucData?.trim(), EXP: expData?.trim(), EQF: eqfData?.trim() },
+  });
+};
+
+const cleanUpTempFile = (filePath) => {
+  fs.unlink(filePath, (err) => {
+    if (err) console.error("Error deleting temp file", err);
+  });
+};
+
+const toSnakeCase = (s) => s.toLowerCase().replace(/\s+/g, "_");

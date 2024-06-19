@@ -75,7 +75,9 @@ export default function CreditReport() {
     }
     if(!user.ssn){
       notify('You need to enter your Social Security Number', 'info');
-      navigate("/dashboard/settings");
+       setTimeout(() => {
+         navigate("/dashboard/settings");
+       }, 2000);
       return false;
     }
     const fileInput = document.createElement("input");
@@ -103,7 +105,7 @@ export default function CreditReport() {
               dispatch(setUser(response.data.user))
             })
             .catch((error) => {
-              notify(error.response?.data.error, "error");
+              notify(error.response?.data.error || 'Error Uploading Credit Report', "error");
             }).finally(() =>{
               setIsUploading(false);
             })

@@ -12,6 +12,10 @@ const CreditReportSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       required: true,
     },
+    round : {
+      type: Number,
+      default: 0
+    }
   },
   { timestamps: true }
 );

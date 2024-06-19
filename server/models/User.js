@@ -50,6 +50,7 @@ const schema = new mongoose.Schema(
     image: String,
     id: String,
     proofOfAddress: String,
+    signaturePath: String,
     ssn: Number,
     balance: Number,
   },

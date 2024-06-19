@@ -111,6 +111,7 @@ export default function LetterModal({
       .post("/api/utils/language", { language, letterContent })
       .then((response) => {
         setEditContent(response.data.letterContent);
+        setChangingLanguage(false);
       })
       .finally(() => {
         notify(`language changed to ${language} `, "success");
@@ -125,9 +126,10 @@ export default function LetterModal({
       .then((response) => {
         setLetterPath(response.data.letterPath);
         dispatch(setUser(response.data.user));
+        notify(`Letter Notarized`, "success");
       })
       .finally(() => {
-        notify(`Letter Notarized`, "success");
+        handleClose();
       });
   };
 
@@ -157,13 +159,22 @@ export default function LetterModal({
                   width="100%"
                   height="500px"
                 ></iframe>
-                <Box display="flex" justifyContent="flex-end" mt={2}>
-                  <Button variant="contained" onClick={handleNotarize}>
-                    Notarize
+                <Box display="flex" justifyContent="space-between" mt={2}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleClose}
+                    color="#131C30"
+                  >
+                    Cancel
                   </Button>
-                  <Button variant="contained" onClick={startEditing}>
-                    Edit
-                  </Button>
+                  <Stack direction="row" justifyContent="" spacing={2}>
+                    <Button variant="contained" onClick={handleNotarize}>
+                      Notarize
+                    </Button>
+                    <Button variant="contained" onClick={startEditing}>
+                      Edit
+                    </Button>
+                  </Stack>
                 </Box>
               </>
             ) : (
@@ -177,39 +188,43 @@ export default function LetterModal({
                   variant="outlined"
                   sx={{ marginTop: "20px", marginBottom: "20px" }}
                 />
-                <Box display="flex" justifyContent="flex-end" mt={2}>
+                <Box display="flex" justifyContent="space-between" mt={2}>
                   <Button
                     variant="outlined"
-                    loading={changingLanguage}
-                    width="165px"
-                    sx={{ mx: 3 }}
+                    onClick={handleClose}
                     color="#131C30"
-                    dropdown
-                    dropdownItems={[
-                      {
-                        text: "English",
-                        onClick: () => changeLanguage("english"),
-                      },
-                      {
-                        text: "Spanish",
-                        onClick: () => changeLanguage("spanish"),
-                      },
-                    ]}
                   >
-                    Change Language
+                    Cancel
                   </Button>
-                  <Button variant="contained" onClick={saveEditing}>
-                    Save
-                  </Button>
+                  <Stack spacing={2} direction="row">
+                    <Button
+                      variant="outlined"
+                      loading={changingLanguage}
+                      width="165px"
+                      sx={{ mx: 3 }}
+                      color="#131C30"
+                      dropdown
+                      dropdownItems={[
+                        {
+                          text: "English",
+                          onClick: () => changeLanguage("english"),
+                        },
+                        {
+                          text: "Spanish",
+                          onClick: () => changeLanguage("spanish"),
+                        },
+                      ]}
+                    >
+                      Change Language
+                    </Button>
+                    <Button variant="contained" onClick={saveEditing}>
+                      Save
+                    </Button>
+                  </Stack>
                 </Box>
               </>
             )}
           </Box>
-          <Stack direction="row" justifyContent="space-between" spacing={2}>
-            <Button variant="outlined" onClick={handleClose} color="#131C30">
-              Cancel
-            </Button>
-          </Stack>
         </Stack>
       </Modal>
       <BuyCreditModal open={buyCredit} setOpen={setBuyCredit} />

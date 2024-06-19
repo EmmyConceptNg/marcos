@@ -1,3 +1,4 @@
+// Import necessary modules
 import express from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
@@ -10,24 +11,29 @@ import subscriptionRoutes from "./routes/Subscription.js";
 import creditRoutes from "./routes/Credit.js";
 import reportRoutes from "./routes/CreditReport.js";
 import lettersRoutes from "./routes/Letters.js";
+import utilsRoutes from "./routes/Utils.js";
 import plaidController from "./routes/Plaid.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
-
-
-
-/* CONFIGURATION */
+// CONFIGURATION
 
 const app = express();
 
+
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+
+// Middleware setup
 app.use(express.json());
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(morgan("dev"));
 
+// CORS setup
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://marcos-indol.vercel.app",
   // Add more origins as needed
 ];
@@ -50,38 +56,33 @@ app.use(
   })
 );
 
-
-
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
+// Load environment variables
 const envFile =
   process.env.NODE_ENV === "production" ? ".env.production" : ".env.local";
+dotenv.config({ path: envFile });
 
-  dotenv.config({ path: envFile });
+// Serve static files from the "public/images" directory
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
-  
+// Route handling
+app.use("/api/auth", userRoutes);
+app.use("/api/subscription", subscriptionRoutes);
+app.use("/api/credit", creditRoutes);
+app.use("/api/creditreport", reportRoutes);
+app.use("/api/letters", lettersRoutes);
+app.use("/api/utils", utilsRoutes);
+app.use("/api/plaid", plaidController);
 
-/* ROUTES */
-app.use("/images", express.static(path.join(__dirname, "public/images")));
-app.use('/api/auth', userRoutes)
-app.use('/api/subscription', subscriptionRoutes)
-app.use('/api/credit', creditRoutes)
-app.use('/api/creditreport', reportRoutes)
-app.use('/api/letters', lettersRoutes)
-app.use('/api/plaid', plaidController)
-
-/* MONGOOSE SETUP */
+// MongoDB setup
 const PORT = process.env.PORT || 8080;
 mongoose
   .connect(process.env.MONGO_URL, {})
   .then(() => {
     console.log("================================================");
-    console.log(`============== Connected to MongoDB ==============`);
-    
-    
+    console.log("============== Connected to MongoDB ==============");
     app.listen(PORT, () => {
       console.log("================================================");
       console.log(`====== Server is running on ${PORT} ==============`);

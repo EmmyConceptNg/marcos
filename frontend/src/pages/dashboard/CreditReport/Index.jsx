@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useDispatch, useSelector } from "react-redux";
-import { mapToRowsStructure } from "../../../utils/helper";
+import { hasProofOfAddress, hasUtilityBill, mapToRowsStructure } from "../../../utils/helper";
 import ProgressLoader from "../../../components/loader";
 import Speedometer from "../../../components/meter";
 import Text from "../../../components/Text";
@@ -68,9 +68,12 @@ export default function CreditReport() {
 
 
   const handleUploadFromComputer = () => {
-    if(!user.proofOfAddress || !user.id){
-      notify('You need to upload a proof of address and a valid ID card', 'info');
-      navigate("/dashboard/settings?proof=true");
+    if (!hasUtilityBill(user) || !hasProofOfAddress(user)) {
+      notify("You need to upload a proof of address and Utility Bill", "info");
+      setTimeout(() => {
+        navigate("/dashboard/settings?proof=true");
+      }, 2000);
+
       return false;
     }
     if(!user.ssn){

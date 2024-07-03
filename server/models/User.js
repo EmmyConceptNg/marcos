@@ -15,6 +15,10 @@ const schema = new mongoose.Schema(
     postalCode: String,
     country: String,
     password: String,
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     email: {
       type: String,
       unique: true,
@@ -48,11 +52,14 @@ const schema = new mongoose.Schema(
     plaidAccessToken: String,
     plaidItemId: String,
     image: String,
-    id: String,
-    proofOfAddress: String,
-    signaturePath: String,
     ssn: Number,
     balance: Number,
+    documents: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Documents",
+      },
+    ],
   },
   { timestamps: true }
 );

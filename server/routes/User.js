@@ -11,13 +11,12 @@ import {
   loginGoogle,
   updateImage,
   updatePassword,
-  updateId,
-  updateProofOfAddress,
-  updateSignature,
+  updateDocument,
 } from "../controllers/UserController.js";
 import { fileURLToPath } from "url";
 
 const router = express.Router();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const imagesDir = path.join(__dirname, "../public/images");
@@ -55,16 +54,10 @@ router.post(
   upload.single("image"),
   updateImage
 );
-router.post("/upload-id/:userId", upload.single("idCard"), updateId);
 router.post(
-  "/upload-address/:userId",
-  upload.single("address"),
-  updateProofOfAddress
-);
-router.post(
-  "/upload-signature/:userId",
-  upload.single("signature"),
-  updateSignature
+  "/upload-documents/:userId",
+  upload.single("document"),
+  updateDocument
 );
 
 export default router;

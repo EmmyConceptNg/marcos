@@ -192,6 +192,7 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
     )
       .populate("subscriptionPlan")
       .populate("creditReport")
+      .populate("documents")
       .select("-password");
 
     res.status(200).json({ user, report: document });
@@ -264,6 +265,7 @@ const parsePdfAndStore = async (textContent, userId, res) => {
     )
       .populate("subscriptionPlan")
       .populate("creditReport")
+      .populate("documents")
       .select("-password");
 
     res.status(200).json({ user, report: document });

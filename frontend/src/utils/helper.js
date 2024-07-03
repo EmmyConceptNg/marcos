@@ -25,3 +25,14 @@ export function mapToRowsStructure(originalData) {
 export function formatCurrency(number, currencySymbol = "$") {
   return currencySymbol + number?.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,");
 }
+
+
+
+export const hasUtilityBill = (user) =>{
+
+  
+  return user?.documents?.some((doc) => doc.name === "utility_bill");
+}
+export const hasProofOfAddress = (user)=>{
+  return user?.documents?.some((doc) => doc.name === "proof_of_address");
+}

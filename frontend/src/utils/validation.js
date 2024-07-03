@@ -80,3 +80,15 @@ export const newsletterValidation = Yup.object({
 export const amountValidation = Yup.object({
   balance: Yup.number().required("Required").min(5),
 });
+export const documentValidation = Yup.object({
+  name: Yup.string().required("Required"),
+  document: Yup.mixed()
+    .required("Document is required")
+  // document: Yup.mixed()
+  //   .required("Document is required")
+  //   .test(
+  //     "fileSize",
+  //     "File size is too large",
+  //     (value) => value && value.size <= 5024 * 5024 // 1MB
+  //   ),
+});

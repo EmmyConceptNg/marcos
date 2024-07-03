@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ckeditor/ckeditor5-build-classic": "^42.0.0",
+    "@ckeditor/ckeditor5-react": "^8.0.0",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
     "@iconify/react": "^4.1.1",
@@ -24,9 +26,11 @@
     "@testing-library/react": "^14.2.1",
     "@vitejs/plugin-react": "^4.2.1",
     "axios": "^1.6.8",
+    "ckeditor5": "^42.0.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
     "formik": "^2.4.5",
+    "html-to-text": "^9.0.5",
     "jest": "^29.7.0",
     "moment": "^2.30.1",
     "path": "^0.12.7",

@@ -1,298 +1,372 @@
-import React from "react";
-import { Box, Stack, Button as MuiButton } from "@mui/material";
+import React, { useState } from "react";
+import {
+  Box,
+  Stack,
+  Button as MuiButton,
+  TextField,
+  Typography,
+  IconButton,
+  Checkbox,
+  FormControlLabel,
+  Grid,
+  Card,
+  CardContent,
+  Modal,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+} from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
-import axios, { getImageUrl } from "../../api/axios";
+import axios from "../../api/axios";
 import PropTypes from "prop-types";
 import { notify } from "../../utils/Index";
 import { setUser } from "../../redux/UserReducer";
-import Text from "../../components/Text";
 import { ToastContainer } from "react-toastify";
+import DeleteIcon from "@mui/icons-material/Delete";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import Button from "../../components/Button";
+import Text from "../../components/Text";
+import DocumentModal from "../../components/modal/DocumentModal";
+import DocumentIcon from "../../components/svgs/DocumentIcon";
+import EditDocIcon from "../../components/svgs/EditDocIcon";
+import moment from "moment";
+import { useNavigate } from "react-router-dom";
+import ReportModal from "../../components/modal/ReportModal";
+import { hasProofOfAddress, hasUtilityBill } from "../../utils/helper";
 
 export default function Documents() {
   const user = useSelector((state) => state.user.details);
   const dispatch = useDispatch();
+  const [openModal, setOpenModal] = useState(false);
+  const [openReport, setOpenReport] = useState(false);
+
+  const navigate = useNavigate()
+
+  const handleDocumetModal = () => {
+    setOpenModal(true);
+  };
+  const handleReportModal = () => {
+    setOpenReport(true);
+  };
+
+  const rows = [
+    {
+      reportDate: "10.04.2024",
+      reportId: "#96816",
+      confirmationNo: "1000025",
+    },
+  ];
+
+
+
+  const handleUploadFromComputer = () => {
+   if(!hasUtilityBill(user) || !hasProofOfAddress(user)){
+      notify('You need to upload a proof of address and Utility Bill', 'info');
+        setTimeout(() => {
+          navigate("/dashboard/settings?proof=true");
+        }, 2000);
+
+      return false;
+    }
+    if (!user.ssn) {
+      notify("You need to enter your Social Security Number", "info");
+      setTimeout(() => {
+        navigate("/dashboard/settings");
+      }, 2000);
+      return false;
+    }
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".pdf,.html";
+
+    fileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileType = file.type;
+        const validTypes = ["application/pdf", "text/html"];
+        if (validTypes.includes(fileType)) {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          await axios
+            .post(`/api/creditreport/upload/${user?._id}`, formData, {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            })
+            .then((response) => {
+              notify(response.data.success, "success");
+              dispatch(setUser(response.data.user));
+            })
+            .catch((error) => {
+              notify(
+                error.response?.data.error || "Error Uploading Credit Report",
+                "error"
+              );
+            })
+        } else {
+          alert("Only PDF and HTML files are allowed.");
+        }
+      }
+    };
+
+    fileInput.click();
+  };
 
   return (
-    <Box mt={3}>
+    <Box mt={3} px={3} pb={3}>
       <ToastContainer />
+      <DocumentModal open={openModal} setOpen={setOpenModal} />
+      <ReportModal
+        open={openReport}
+        setOpen={setOpenReport}
+      />
+      <Stack direction="row" justifyContent="space-between">
+        <Text fw="500" fs="24px">
+          Identification
+        </Text>
+        <Button
+          width="150px"
+          height="44px"
+          color="#475467"
+          variant="outlined"
+          onClick={handleDocumetModal}
+        >
+          + Add document
+        </Button>
+      </Stack>
       <Stack
-        direction={{ sm: "row", xs: "column" }}
+        direction="row"
         spacing={2}
         justifyContent="space-between"
         alignItems="center"
       >
-        <ID user={user} />
-        <Address user={user} />
-        <Signature user={user} />
+        <Grid container spacing={2}>
+          {user?.documents?.map((document, index) => (
+            <Grid item lg={4} md={6} xs={12} key={index}>
+              <Doc name={document.name} path={document.path} />
+            </Grid>
+          ))}
+        </Grid>
       </Stack>
-    </Box>
-  );
-}
 
-function ID({ user }) {
-  const dispatch = useDispatch();
+      <Box mt={4}>
+        <Typography variant="h6" gutterBottom>
+          Credit report
+        </Typography>
 
-  const handleIDCard = () => {
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = ".png,.jpeg,.jpg";
+        <TableContainer>
+          <Table sx={{ minWidth: 650 }} aria-label="simple table">
+            <TableHead>
+              <TableRow>
+                {[
+                  "Report Date ",
+                  "Report ID",
+                  "Confirmation No.",
+                  "Receipt",
+                  "Action",
+                ].map((item, index) => (
+                  <TableCell key={index}>
+                    <Text fs="12px" fw="550" color="#475467">
+                      {item}
+                    </Text>
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.map((row, index) => (
+                <TableRow
+                  key={index}
+                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                >
+                  <TableCell
+                    sx={{
+                      fontSize: "15px",
+                      color: "#475467",
+                      fontWeight: "550",
+                    }}
+                    component="th"
+                    scope="row"
+                  >
+                    {moment(user?.creditReport?.createdAt).format("YYYY-MM-DD")}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontSize: "15px",
+                      color: "#475467",
+                      fontWeight: "400",
+                    }}
+                    align="left"
+                  >
+                    {user?.creditReport?._id?.slice(0, 6)}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontSize: "15px",
+                      color: "#475467",
+                      fontWeight: "400",
+                    }}
+                    align="left"
+                  >
+                    {moment(user?.creditReport?.createdAt).format("YYYY-MM-DD")}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontSize: "15px",
+                      color: "#475467",
+                      fontWeight: "400",
+                    }}
+                    align="left"
+                  >
+                    <Box sx={{ cursor: "pointer" }}>
+                      <DocumentIcon />
+                    </Box>
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontSize: "15px",
+                      color: "#475467",
+                      fontWeight: "400",
+                    }}
+                    align="left"
+                  >
+                    <Stack direction="row" spacing={2}>
+                      <Box sx={{ cursor: "pointer" }}>
+                        <VisibilityIcon onClick={handleReportModal} />
+                      </Box>
 
-    fileInput.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const formData = new FormData();
-        formData.append("idCard", file);
-
-        try {
-          const response = await axios.post(
-            `/api/auth/upload-id/${user?._id}`,
-            formData,
-            {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-            }
-          );
-          notify(response.data.success, "success");
-          dispatch(setUser(response.data.user));
-        } catch (error) {
-          notify(error.response?.data.error, "error");
-        }
-      }
-    };
-
-    fileInput.click();
-  };
-
-  return (
-    <Box width="100%">
-      <Box
-        sx={{ border: "1px solid #CDCDCD" }}
-        height="300px"
-        width="100%"
-        borderRadius="15px"
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-      >
-        {!user?.id ? (
-          <Stack spacing={2} justifyContent="center" alignItems="center">
-            <Text
-              color="#131C30"
-              fs={{ sm: "16px", xs: "16px" }}
-              sx={{ textAlign: "center" }}
-              fw="400"
-            >
-              Please Upload a valid ID card
-            </Text>
-            <MuiButton variant="contained" width="150px" onClick={handleIDCard}>
-              Upload
-            </MuiButton>
-          </Stack>
-        ) : (
-          <img src={user.id} alt="User ID" height="300px" width="100%" />
-        )}
+                      <Box
+                        sx={{ cursor: "pointer" }}
+                        onClick={handleUploadFromComputer}
+                      >
+                        <EditDocIcon />
+                      </Box>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
-      {user?.id && (
-        <Box display="flex" justifyContent="center" mt={3}>
-          <MuiButton
-            variant="contained"
-            width="150px"
-            height="30px"
-            onClick={handleIDCard}
-          >
-            Replace
-          </MuiButton>
-        </Box>
-      )}
-    </Box>
-  );
-}
 
-function Address({ user }) {
-  const dispatch = useDispatch();
-
-  const handleProofOfAddress = () => {
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = ".png,.jpeg,.jpg";
-
-    fileInput.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const formData = new FormData();
-        formData.append("address", file);
-
-        try {
-          const response = await axios.post(
-            `/api/auth/upload-address/${user?._id}`,
-            formData,
-            {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-            }
-          );
-          notify(response.data.success, "success");
-          dispatch(setUser(response.data.user));
-        } catch (error) {
-          notify(error.response?.data.error, "error");
-        }
-      }
-    };
-
-    fileInput.click();
-  };
-
-  return (
-    <Box width="100%">
-      <Box
-        sx={{ border: "1px solid #CDCDCD" }}
-        height="300px"
-        width="100%"
-        borderRadius="15px"
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-      >
-        {!user?.proofOfAddress ? (
-          <Stack spacing={2} justifyContent="center" alignItems="center">
-            <Text
-              color="#131C30"
-              fs={{ sm: "16px", xs: "16px" }}
-              sx={{ textAlign: "center" }}
-              fw="400"
-            >
-              Please Upload a proof of address
-            </Text>
-            <MuiButton
-              variant="contained"
-              width="150px"
-              onClick={handleProofOfAddress}
-            >
-              Upload
-            </MuiButton>
-          </Stack>
-        ) : (
-          <img
-            src={user.proofOfAddress}
-            alt="Proof of Address"
-            height="300px"
-            width="100%"
+      <Box mt={4}>
+        <Typography variant="h6" gutterBottom>
+          Credit monitoring credentials
+        </Typography>
+        <Stack direction="row" spacing={2}>
+          <TextField
+            label="Credit monitoring name"
+            value="Charlene Reed"
+            fullWidth
           />
-        )}
-      </Box>
-      {user?.proofOfAddress && (
-        <Box display="flex" justifyContent="center" mt={3}>
-          <MuiButton
-            variant="contained"
-            width="150px"
-            height="30px"
-            onClick={handleProofOfAddress}
-          >
-            Replace
+          <TextField label="User Name" value="Charlene Reed" fullWidth />
+        </Stack>
+        <Stack direction="row" spacing={2} mt={2}>
+          <TextField
+            label="Password"
+            type="password"
+            value="********"
+            fullWidth
+          />
+          <TextField label="Other" value="charlenereed@gmail.com" fullWidth />
+        </Stack>
+        <Box mt={2} textAlign="right">
+          <MuiButton variant="contained" color="secondary">
+            Save
           </MuiButton>
         </Box>
-      )}
+      </Box>
     </Box>
   );
 }
 
-function Signature({ user }) {
-  const dispatch = useDispatch();
+const Doc = ({ name, path }) => {
+  const displayName = name?.replace(/_/g, " ");
+  const [open, setOpen] = useState(false);
 
-  const handleSignature = () => {
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = ".png,.jpeg,.jpg";
-
-    fileInput.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const formData = new FormData();
-        formData.append("signature", file);
-
-        try {
-          const response = await axios.post(
-            `/api/auth/upload-signature/${user?._id}`,
-            formData,
-            {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-            }
-          );
-          notify(response.data.success, "success");
-          dispatch(setUser(response.data.user));
-        } catch (error) {
-          notify(error.response?.data.error, "error");
-        }
-      }
-    };
-
-    fileInput.click();
-  };
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
 
   return (
-    <Box width="100%">
-      <Box
-        sx={{ border: "1px solid #CDCDCD" }}
-        height="300px"
-        width="100%"
-        borderRadius="15px"
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-      >
-        {!user?.signaturePath ? (
-          <Stack spacing={2} justifyContent="center" alignItems="center">
-            <Text
-              color="#131C30"
-              fs={{ sm: "16px", xs: "16px" }}
-              sx={{ textAlign: "center" }}
-              fw="400"
-            >
-              Please Upload a signature
-            </Text>
-            <MuiButton
-              variant="contained"
-              width="150px"
-              onClick={handleSignature}
-            >
-              Upload
-            </MuiButton>
-          </Stack>
-        ) : (
-          <img
-            src={user.signaturePath}
-            alt="Signature"
-            height="300px"
-            width="100%"
+    <>
+      <Card sx={{ height: "192px", position: "relative" }}>
+        <CardContent>
+          <Box
+            component="img"
+            src={path}
+            alt={name}
+            sx={{
+              width: "100%",
+              height: "auto",
+              borderRadius: 1,
+              filter: "blur(8px)",
+            }}
           />
-        )}
-      </Box>
-      {user?.signaturePath && (
-        <Box display="flex" justifyContent="center" mt={3}>
-          <MuiButton
-            variant="contained"
-            width="150px"
-            height="30px"
-            onClick={handleSignature}
+          <IconButton
+            onClick={handleOpen}
+            sx={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+            }}
           >
-            Replace
-          </MuiButton>
+            <VisibilityIcon />
+          </IconButton>
+        </CardContent>
+      </Card>
+      <Stack p={2} direction="row" justifyContent="space-between">
+        <Typography sx={{ textTransform: "capitalize", fontSize: "18px" }}>
+          {displayName}
+        </Typography>
+        <Typography
+          sx={{
+            textTransform: "capitalize",
+            fontSize: "18px",
+            color: "#EE4C4C",
+            cursor: "pointer",
+          }}
+        >
+          Delete
+        </Typography>
+      </Stack>
+      <Modal
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            bgcolor: "background.paper",
+            border: "2px solid #000",
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
+          <Box
+            component="img"
+            src={path}
+            alt={name}
+            sx={{ width: "100%", height: "auto" }}
+          />
         </Box>
-      )}
-    </Box>
+      </Modal>
+    </>
   );
-}
-
-ID.propTypes = {
-  user: PropTypes.object.isRequired,
 };
-Address.propTypes = {
-  user: PropTypes.object.isRequired,
-};
-Signature.propTypes = {
-  user: PropTypes.object.isRequired,
+Doc.propTypes = {
+  name: PropTypes.string.isRequired,
+  path: PropTypes.string.isRequired,
 };

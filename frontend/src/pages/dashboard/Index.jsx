@@ -18,7 +18,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import ProgressMeter from "../../components/loader";
 import ProgressLoader from "../../components/loader";
-import { mapToRowsStructure } from "../../utils/helper";
+import { hasProofOfAddress, hasUtilityBill, mapToRowsStructure } from "../../utils/helper";
 import { ToastContainer } from "react-toastify";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
@@ -192,8 +192,8 @@ function Disputes() {
  
 
   const handleUploadFromComputer = () => {
-    if(!user.proofOfAddress || !user.id){
-      notify('You need to upload a proof of address and a valid ID card', 'info');
+    if(!hasUtilityBill(user) || !hasProofOfAddress(user)){
+      notify('You need to upload a proof of address and Utility Bill', 'info');
         setTimeout(() => {
           navigate("/dashboard/settings?proof=true");
         }, 2000);

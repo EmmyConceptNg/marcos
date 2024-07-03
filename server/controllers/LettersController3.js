@@ -2,6 +2,7 @@ import fs from "fs"; // Regular fs import for createWriteStream
 import { promises as fsPromises } from "fs"; // Promise-based functions
 import Letters from "../models/Letters.js";
 import PDFDocument from "pdfkit";
+import OpenAI from "openai";
 import User from "../models/User.js";
 import archiver from "archiver";
 import nodemailer from "nodemailer";
@@ -9,6 +10,10 @@ import path from "path";
 import { PDFDocument as PdfLibDocument, rgb } from "pdf-lib";
 import axios from "axios";
 import { htmlToText } from "html-to-text";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_SECRET,
+});
 
 const bureaus = {
   EQF: { name: "Equifax", address: "Equifax Address" },
@@ -37,7 +42,7 @@ export const createLetters = async (req, res) => {
   let letterPaths = [];
 
   try {
-    const user = await User.findOne({ _id: userId }).populate("documents");
+    const user = await User.findOne({ _id: userId });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     for (const bureauCode of Object.keys(bureaus)) {
@@ -61,28 +66,6 @@ export const createLetters = async (req, res) => {
       const content = convertToPlainText(htmlContent);
 
       doc.fontSize(12).text(content);
-
-      // Embed user's documents
-      if (user.documents && user.documents.length > 0) {
-        for (const userDocument of user.documents) {
-          try {
-            const imageBytes = await fetchImageAsBytes(userDocument.path);
-            const image = doc.openImage(imageBytes);
-            // Add a new page and draw the image
-            doc.addPage().image(image, {
-              fit: [500, 500],
-              align: "center",
-              valign: "center",
-            });
-          } catch (docError) {
-            console.error(
-              `Error embedding document ${userDocument.name}:`,
-              docError
-            );
-          }
-        }
-      }
-
       doc.end();
 
       writeStream.on("finish", async () => {
@@ -289,6 +272,7 @@ export const getLetterById = async (req, res) => {
   }
 };
 
+
 // Update letter content by ID
 export const updateLetterById = async (req, res) => {
   const { letterId } = req.params;
@@ -354,7 +338,6 @@ export const updateLetterById = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 // Function to fetch image as bytes
 const fetchImageAsBytes = async (imageUrl) => {
   const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
@@ -513,6 +496,10 @@ export const mailOutLetters = async (req, res) => {
   }
 };
 
+
+
+
+
 // Utility function to convert plain text to HTML content
 const convertToHtml = (text) => {
   return text
@@ -526,10 +513,9 @@ const convertToPlainText = (html) => {
   const options = {
     wordwrap: 130,
     selectors: [
-      { selector: "p", format: "block" },
-      { selector: "br", format: "block" },
+      { selector: 'p', format: 'block' },
+      { selector: 'br', format: 'block' },
     ],
   };
   return htmlToText(html, options);
 };
-

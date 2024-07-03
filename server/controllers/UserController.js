@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { sendMail } from "./SendMail.js";
 import Plan from "../models/Plan.js";
+import Documents from "../models/Documents.js";
 
 export const login = async (req, res) => {
   let signdetails = req.body;
@@ -10,7 +11,8 @@ export const login = async (req, res) => {
   const user = await User.findOne({ email: signdetails.email })
     .populate("subscriptionPlan")
     .populate("creditReport")
-    .populate("letters")
+    .populate("documents")
+    .populate("letters");
     
 
   if (!user) {
@@ -59,6 +61,7 @@ export const loginGoogle = async (req, res) => {
       .populate("subscriptionPlan")
       .populate("creditReport")
       .populate("letters")
+      .populate("documents")
       .select("-password")
       .lean();
 
@@ -133,6 +136,7 @@ export const register = async (req, res) => {
     const populatedUser = await User.findById(createUser._id)
       .populate("subscriptionPlan")
       .populate("creditReport")
+      .populate("documents")
       .select("-password");
 
     if (createUser) {
@@ -246,6 +250,7 @@ export const updateImage = async (req, res) => {
     )
       .populate("subscriptionPlan")
       .populate("creditReport")
+      .populate("documents")
       .select("-password")
       .then((user) => {
         res.status(200).json({ user });
@@ -256,29 +261,51 @@ export const updateImage = async (req, res) => {
 };
 
 
-const updateUserField = async (userId, field, filePath, res) => {
+export const updateDocument = async (req, res) => {
   try {
-    const updateData = {};
-    updateData[field] = `${process.env.SERVER_URL}/images/${filePath.replace(/\\/g, "/")}`;
+    if (!req.file?.filename) {
+      throw new Error("File path is undefined");
+    }
 
-    const user = await User.findByIdAndUpdate(userId, updateData, { new: true })
+    const documentPath = `${
+      process.env.SERVER_URL
+    }/images/${req.file.filename.replace(/\\/g, "/")}`;
+    console.log("Document Path: ", documentPath);
+
+    const createDocument = await Documents.create({
+      userId: req.params.userId,
+      name: req.body.name,
+      path: documentPath,
+    });
+
+    if (!createDocument) {
+      return res.status(409).json({ error: "Document creation failed" });
+    }
+
+    // Add the created document to the user's documents array
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      { $push: { documents: createDocument._id } },
+      { new: true }
+    )
       .populate("subscriptionPlan")
       .populate("creditReport")
       .populate("letters")
-      .select("-password"); 
+      .populate("documents")
+      .select("-password");
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     res.status(200).json({ user });
   } catch (error) {
+    console.error("Error updating document: ", error);
     res.status(400).json({ error: error.message });
   }
 };
 
-export const updateId = (req, res) =>
-  updateUserField(req.params.userId, "id", req.file.filename, res);
-export const updateProofOfAddress = (req, res) =>
-  updateUserField(req.params.userId, "proofOfAddress", req.file.filename, res);
-export const updateSignature = (req, res) =>
-  updateUserField(req.params.userId, "signaturePath", req.file.filename, res);
+
 
 const html = (user) => {
   return ` <center>

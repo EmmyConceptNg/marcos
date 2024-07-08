@@ -20,17 +20,6 @@ import { fileURLToPath } from "url";
 
 const app = express();
 
-
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
-
-// Middleware setup
-app.use(express.json());
-app.use(helmet());
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
-app.use(morgan("dev"));
-
-// CORS setup
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
@@ -38,13 +27,11 @@ const allowedOrigins = [
   // Add more origins as needed
 ];
 
+// CORS setup
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin, like mobile apps, or curl requests
       if (!origin) return callback(null, true);
-
-      // Check if the origin is in our list
       if (allowedOrigins.indexOf(origin) === -1) {
         const msg =
           "The CORS policy for this site does not allow access from the specified origin.";
@@ -56,6 +43,12 @@ app.use(
   })
 );
 
+app.use(helmet());
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+app.use(morgan("dev"));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -65,7 +58,13 @@ const envFile =
 dotenv.config({ path: envFile });
 
 // Serve static files from the "public/images" directory
-app.use('/images', express.static(path.join(__dirname, 'public/images')));
+app.use("/images", express.static(path.join(__dirname, "public/images")));
+
+// Log incoming requests
+app.use((req, res, next) => {
+  console.log(`Request from origin: ${req.headers.origin}`);
+  next();
+});
 
 // Route handling
 app.use("/api/auth", userRoutes);
@@ -75,6 +74,17 @@ app.use("/api/creditreport", reportRoutes);
 app.use("/api/letters", lettersRoutes);
 app.use("/api/utils", utilsRoutes);
 app.use("/api/plaid", plaidController);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Error message:", err.message);
+  console.error("Error stack:", err.stack);
+  res.status(err.status || 500).json({
+    error: {
+      message: err.message,
+    },
+  });
+});
 
 // MongoDB setup
 const PORT = process.env.PORT || 8080;

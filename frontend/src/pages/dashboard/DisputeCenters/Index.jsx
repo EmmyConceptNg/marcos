@@ -6,10 +6,6 @@ import {
   Checkbox,
   Typography,
   Grid,
-  IconButton,
-  Menu,
-  MenuItem,
-  CircularProgress,
   Fade,
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -27,7 +23,6 @@ import NoBalanceModal from "../../../components/modal/NoBalanceModal";
 import { setUser } from "../../../redux/UserReducer";
 import LetterModal from "../../../components/modal/LetterModal";
 import { useNavigate } from "react-router-dom";
-import { PageLoader } from "../../../utils/Loader";
 
 export default function DisputeCenters() {
   const [type, setType] = useState("disputing");

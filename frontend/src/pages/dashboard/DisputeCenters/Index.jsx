@@ -130,7 +130,7 @@ export default function DisputeCenters() {
 
       setTimeout(() => {
         setType("attacks");
-      }, 2000);
+      }, 3000);
 
       setAttacking(false);
     } catch (error) {
@@ -139,7 +139,7 @@ export default function DisputeCenters() {
       notify("Error: The attack could not be completed.", "error");
       setTimeout(() => {
          setAttacking(false);
-      }, 2000);
+      }, 3000);
     }
   };
 

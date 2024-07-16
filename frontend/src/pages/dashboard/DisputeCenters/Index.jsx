@@ -130,14 +130,16 @@ export default function DisputeCenters() {
 
       setTimeout(() => {
         setType("attacks");
-      }, 1000);
+      }, 2000);
 
       setAttacking(false);
     } catch (error) {
       console.error("Attack failed:", error);
 
       notify("Error: The attack could not be completed.", "error");
-      setAttacking(false);
+      setTimeout(() => {
+         setAttacking(false);
+      }, 2000);
     }
   };
 

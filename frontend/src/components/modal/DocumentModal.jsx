@@ -31,7 +31,6 @@ export default function DocumentModal({ open, setOpen }) {
   const documentOptions = [
     { label: "Proof of Address", value: "proof_of_address" },
     { label: "ID Card", value: "id_card" },
-    { label: "Utility Bill", value: "utility_bill" },
     { label: "Others", value: "others" },
   ];
 

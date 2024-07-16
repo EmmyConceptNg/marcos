@@ -9,6 +9,8 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  CircularProgress,
+  Fade,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import Text from "../../../components/Text";
@@ -25,6 +27,7 @@ import NoBalanceModal from "../../../components/modal/NoBalanceModal";
 import { setUser } from "../../../redux/UserReducer";
 import LetterModal from "../../../components/modal/LetterModal";
 import { useNavigate } from "react-router-dom";
+import { PageLoader } from "../../../utils/Loader";
 
 export default function DisputeCenters() {
   const [type, setType] = useState("disputing");
@@ -34,9 +37,19 @@ export default function DisputeCenters() {
   const [inquiries, setInquiries] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [checkboxStates, setCheckboxStates] = useState({});
+  const [showLoader, setShowLoader] = useState(attacking);
+
+  useEffect(() => {
+    if (!attacking) {
+      const timer = setTimeout(() => setShowLoader(false), 1000); // Wait 1 second before hiding the loader
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoader(true); // Show loader if attacking is true
+    }
+  }, [attacking]);
 
   const dispatch = useDispatch();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleAttackNow = async () => {
     // Compile the selected disputes, accounts, and inquiries
@@ -47,6 +60,10 @@ export default function DisputeCenters() {
       setTimeout(() => {
         navigate("/dashboard/settings");
       }, 2000);
+      return false;
+    }
+    if (user?.creditReport?.round > 4) {
+      notify("Error: Sorry you've used up your rounds", "error");
       return false;
     }
     if (!isAnyCheckboxSelected()) {
@@ -111,14 +128,14 @@ export default function DisputeCenters() {
       dispatch(setUser(response.data.user));
       notify("Success: Letters have been generated and sent!", "success");
 
-      
-        setTimeout(() => {
-          setType('attacks');
-        }, 1000); 
-      
+      setTimeout(() => {
+        setType("attacks");
+      }, 1000);
+
       setAttacking(false);
     } catch (error) {
       console.error("Attack failed:", error);
+
       notify("Error: The attack could not be completed.", "error");
       setAttacking(false);
     }
@@ -144,121 +161,163 @@ export default function DisputeCenters() {
   };
 
   return (
-    <Box>
+    <>
       <ToastContainer />
       <Helmet>
         <title>Dispute Center</title>
       </Helmet>
 
-      <Stack spacing={3} sx={{ overflow: "hidden" }}>
-        <Stack direction="row" sx={{ width: { sm: "314px", xs: "100%" } }}>
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            onClick={() => {
-              setType("disputing");
-            }}
-            sx={{
-              width: { sm: "157px", xs: "100%" },
-              height: "51px",
-              borderTopLeftRadius: "10px",
-              borderBottomLeftRadius: "10px",
-              cursor: "pointer",
-              border:
-                type === "disputing"
-                  ? "1px solid #FF9D43"
-                  : "1px solid #CDCDCD",
-            }}
-          >
-            <Text
-              fs="18px"
-              fw="550"
-              color={type === "disputing" ? "#FF9D43" : "#CDCDCD"}
-            >
-              Disputing
-            </Text>
-          </Box>
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            onClick={() => {
-              setType("attacks");
-            }}
-            sx={{
-              width: { sm: "157px", xs: "100%" },
-              height: "51px",
-              borderTopRightRadius: "10px",
-              borderBottomRightRadius: "10px",
-              cursor: "pointer",
-              border:
-                type === "attacks" ? "1px solid #FF9D43" : "1px solid #CDCDCD",
-            }}
-          >
-            <Text
-              fs="18px"
-              fw="550"
-              color={type === "attacks" ? "#FF9D43" : "#CDCDCD"}
-            >
-              Attacks
-            </Text>
-          </Box>
-        </Stack>
-        {type === "disputing" && (
-          <>
-            <Text fs="24px" fw="550" color="#131C30">
-              Disputes
-            </Text>
-
-            <Stack direction="row" spacing={2} justifyContent="space-between">
-              <SearchInput
-                width="320px"
-                height="50px"
-                placeholder="Search"
-                bgcolor="#fff"
-              />
-
-              <Stack
-                direction="row"
-                spacing={2}
-                sx={{ px: 3, backgroundColor: "#fff" }}
+      <Fade in={true} timeout={1000}>
+        <Box sx={{  backgroundColor: "transparent" }}>
+          <Stack spacing={3} sx={{ overflow: "hidden" }}>
+            <Stack direction="row" sx={{ width: { sm: "314px", xs: "100%" } }}>
+              <Box
+                display="flex"
                 justifyContent="center"
                 alignItems="center"
+                onClick={() => {
+                  setType("disputing");
+                }}
+                sx={{
+                  width: { sm: "157px", xs: "100%" },
+                  height: "51px",
+                  borderTopLeftRadius: "10px",
+                  borderBottomLeftRadius: "10px",
+                  cursor: "pointer",
+                  border:
+                    type === "disputing"
+                      ? "1px solid #FF9D43"
+                      : "1px solid #CDCDCD",
+                }}
               >
-                <FilterList />
-                <Text fs="14px" fw="550" color="#475467" sx={{ mb: 0 }}>
-                  Filters
+                <Text
+                  fs="18px"
+                  fw="550"
+                  color={type === "disputing" ? "#FF9D43" : "#CDCDCD"}
+                >
+                  Disputing
                 </Text>
-              </Stack>
+              </Box>
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                onClick={() => {
+                  if (!attacking) {
+                    setType("attacks");
+                  } else {
+                    notify("Attacking!!! Please wait...", "info");
+                  }
+                }}
+                sx={{
+                  width: { sm: "157px", xs: "100%" },
+                  height: "51px",
+                  borderTopRightRadius: "10px",
+                  borderBottomRightRadius: "10px",
+                  cursor: "pointer",
+                  border:
+                    type === "attacks"
+                      ? "1px solid #FF9D43"
+                      : "1px solid #CDCDCD",
+                }}
+              >
+                <Text
+                  fs="18px"
+                  fw="550"
+                  color={type === "attacks" ? "#FF9D43" : "#CDCDCD"}
+                >
+                  Attacks
+                </Text>
+              </Box>
             </Stack>
-          </>
-        )}
-        {type === "disputing" && (
-          <Disputes
-            handleAttackNow={handleAttackNow}
-            setAttacking={setAttacking}
-            attacking={attacking}
-            disputes={disputes}
-            accounts={accounts}
-            inquiries={inquiries}
-            checkboxStates={checkboxStates}
-            setDisputes={setDisputes}
-            setAccounts={setAccounts}
-            setInquiries={setInquiries}
-            setCheckboxStates={setCheckboxStates}
-          />
-        )}
-        {type === "attacks" && (
-          <Attacks
-            setType={setType}
-            user={user}
-            handleAttackNow={handleAttackNow}
-            attacking={attacking}
-          />
-        )}
-      </Stack>
-    </Box>
+
+            {type === "disputing" && (
+              <>
+                <Text fs="24px" fw="550" color="#131C30">
+                  Disputes
+                </Text>
+
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  justifyContent="space-between"
+                >
+                  <SearchInput
+                    width="320px"
+                    height="50px"
+                    placeholder="Search"
+                    bgcolor="#fff"
+                  />
+
+                  <Stack
+                    direction="row"
+                    spacing={2}
+                    sx={{ px: 3, backgroundColor: "#fff" }}
+                    justifyContent="center"
+                    alignItems="center"
+                  >
+                    <FilterList />
+                    <Text fs="14px" fw="550" color="#475467" sx={{ mb: 0 }}>
+                      Filters
+                    </Text>
+                  </Stack>
+                </Stack>
+              </>
+            )}
+            {showLoader && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                  bgcolor: "rgba(0, 0, 0, 0.5)", // Adjust the opacity here
+                  position: "fixed", // Change to fixed to cover the whole page
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  zIndex: 9999, // Ensure this is the highest zIndex
+                }}
+              >
+                <Box
+                  component="img"
+                  src="/assets/icons/writing.gif"
+                  sx={{ width: "200px", height:'200px', borderRadius: "100%" }}
+                />
+                <Text color="#fff" sx={{ fontWeight: "bold", mt: 2 }}>
+                  Disputing... Please Wait...
+                </Text>
+              </Box>
+            )}
+
+            {type === "disputing" && (
+              <Disputes
+                handleAttackNow={handleAttackNow}
+                setAttacking={setAttacking}
+                attacking={attacking}
+                disputes={disputes}
+                accounts={accounts}
+                inquiries={inquiries}
+                checkboxStates={checkboxStates}
+                setDisputes={setDisputes}
+                setAccounts={setAccounts}
+                setInquiries={setInquiries}
+                setCheckboxStates={setCheckboxStates}
+              />
+            )}
+            {type === "attacks" && (
+              <Attacks
+                setType={setType}
+                user={user}
+                handleAttackNow={handleAttackNow}
+                attacking={attacking}
+              />
+            )}
+          </Stack>
+        </Box>
+      </Fade>
+    </>
   );
 }
 
@@ -918,12 +977,12 @@ function Attacks({ setType, handleAttackNow, attacking }) {
     }
   };
 
-  const handleSaveLetter = async (updatedContent, updatedPdfContent) => {
+  const handleSaveLetter = async (updatedContent) => {
     try {
       await axios
         .put(`/api/letters/${selectedLetter}`, {
           content: updatedContent,
-          pdfContent: updatedPdfContent, // Assuming your API expects this field
+          // pdfContent: updatedPdfContent, // Assuming your API expects this field
           userId: user._id,
         })
         .then((response) => {
@@ -961,15 +1020,14 @@ function Attacks({ setType, handleAttackNow, attacking }) {
             </Stack>
 
             <RoundMenu
+              setType={setType}
               user={user}
               handleAttackNow={handleAttackNow}
               attacking={attacking}
             />
           </Stack>
 
-          <Box
-            sx={{ boxShadow: "10px 10px 10px #131C30", bgcolor: "#fff", p: 4 }}
-          >
+          <Box sx={{ boxShadow: "0px 1px 3px #131C30", bgcolor: "#fff", p: 4 }}>
             <Stack spacing={2}>
               <Stack direction="row" spacing={2}>
                 <Text fs="20px" fw="550" color="#131C30">
@@ -1024,6 +1082,7 @@ function Attacks({ setType, handleAttackNow, attacking }) {
         setLetterContent={setLetterContent}
         handleSaveLetter={handleSaveLetter}
         selectedLetter={selectedLetter}
+        setSelectedLetter={setSelectedLetter}
       />
     </>
   );
@@ -1209,51 +1268,19 @@ function InquiryBox({
   );
 }
 
-function RoundMenu({ user, handleAttackNow, attacking }) {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const open = Boolean(anchorEl);
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
+function RoundMenu({ user, attacking, setType }) {
   return (
-    <div>
-      <IconButton
-        aria-label=""
-        id="basic-button"
-        aria-controls={open ? "basic-menu" : undefined}
-        aria-haspopup="true"
-        aria-expanded={open ? "true" : undefined}
-        onClick={handleClick}
-      >
-        <MoreVert />
-      </IconButton>
-      <Menu
-        id="basic-menu"
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        MenuListProps={{
-          "aria-labelledby": "basic-button",
-        }}
-      >
-        <MenuItem onClick={handleClose}>
-          {!attacking ? (
-            <Text
-              onClick={() => {
-                handleAttackNow();
-              }}
-            >
-              {`Start Round ${user?.creditReport?.round ? user?.creditReport?.round + 1 : 1}`}
-            </Text>
-          ) : (
-            "Attacking, Please wait..."
-          )}
-        </MenuItem>
-      </Menu>
-    </div>
+    <>
+      {!user?.creditReport?.round > 5 && (
+        <Button
+          sx={{ mb: 2 }}
+          variant="contained"
+          loading={attacking}
+          onClick={() => setType("disputing")}
+        >
+          {`Start Round ${user?.creditReport?.round ? user?.creditReport?.round + 1 : 1}`}
+        </Button>
+      )}
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import { Zoom, toast } from "react-toastify";
 
+
 export const notify = (message, type) => {
   const notifyObject = {
     info: () =>
@@ -35,6 +36,8 @@ export const notify = (message, type) => {
       }),
   }[type]();
 };
+
+
 
 
 

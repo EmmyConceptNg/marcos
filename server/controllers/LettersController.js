@@ -9,6 +9,11 @@ import path from "path";
 import { PDFDocument as PdfLibDocument, rgb } from "pdf-lib";
 import axios from "axios";
 import { htmlToText } from "html-to-text";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_SECRET,
+});
 
 const bureaus = {
   EQF: { name: "Equifax", address: "Equifax Address" },
@@ -46,10 +51,6 @@ export const createLetters = async (req, res) => {
 
       console.log(`Generating letter for ${bureau.name}`);
 
-      const writeStream = fs.createWriteStream(filePath);
-      const doc = new PDFDocument();
-      doc.pipe(writeStream);
-
       const htmlContent = await generateLetterContent(
         bureauCode,
         disputes,
@@ -58,54 +59,17 @@ export const createLetters = async (req, res) => {
         user
       );
 
-      const content = convertToPlainText(htmlContent);
+      await generatePDF(filePath, htmlContent, user.documents);
 
-      doc.fontSize(12).text(content);
+      letterPaths.push({
+        bureau: bureau.name,
+        path: filePath,
+        content: htmlContent, // Store HTML content
+      });
 
-      // Embed user's documents
-      if (user.documents && user.documents.length > 0) {
-        for (const userDocument of user.documents) {
-          try {
-            const imageBytes = await fetchImageAsBytes(userDocument.path);
-            const image = doc.openImage(imageBytes);
-            // Add a new page and draw the image
-            doc.addPage().image(image, {
-              fit: [500, 500],
-              align: "center",
-              valign: "center",
-            });
-          } catch (docError) {
-            console.error(
-              `Error embedding document ${userDocument.name}:`,
-              docError
-            );
-          }
-        }
+      if (letterPaths.length === Object.keys(bureaus).length) {
+        await updateDatabaseWithLetterPathsAndContents(userId, letterPaths, res);
       }
-
-      doc.end();
-
-      writeStream.on("finish", async () => {
-        console.log(`Dispute letter for ${bureau.name} saved.`);
-        letterPaths.push({
-          bureau: bureau.name,
-          path: filePath,
-          content: htmlContent, // Store HTML content
-        });
-
-        if (letterPaths.length === Object.keys(bureaus).length) {
-          await updateDatabaseWithLetterPathsAndContents(
-            userId,
-            letterPaths,
-            res
-          );
-        }
-      });
-
-      writeStream.on("error", (error) => {
-        console.error(`Error writing PDF for ${bureau.name}:`, error);
-        res.status(500).json({ error: "Error writing PDF document." });
-      });
     }
   } catch (error) {
     res
@@ -125,7 +89,9 @@ async function generateLetterContent(
   const ssnString = user.ssn.toString().padStart(9, "0");
   const last4SSN = ssnString.slice(-4);
 
-  let content = `Name: ${user.fullName}
+  let content = `Generate a professional credit repair letter with the format below and if possible,
+  
+  Name: ${user.fullName}
 Address: ${user.presentAddress}
 DOB: ${user.dob ? new Date(user.dob).toLocaleDateString() : "N/A"}
 Last 4 of SSN: ${last4SSN}
@@ -194,8 +160,34 @@ Thank you for your prompt attention to this matter.
 Sincerely,
 ${user.fullName}`;
 
-  const htmlContent = convertToHtml(content);
-  return htmlContent;
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful assistant.",
+        },
+        { role: "user", content: content },
+      ],
+      max_tokens: 1024,
+    });
+
+    // Log the entire completion object to inspect its structure
+    console.log(`Received completion:`, completion.choices[0].message.content);
+
+    // Assuming the response structure matches the documentation:
+    const letterContent = completion.choices[0].message.content.trim();
+    // return letterContent;
+
+    const htmlContent = convertToHtml(letterContent);
+    return htmlContent;
+  } catch (error) {
+    console.error("Error generating letter content with OpenAI:", error);
+    throw new Error(
+      `Error generating content for bureau ${bureau}: ${error.message}`
+    );
+  }
 }
 
 async function updateDatabaseWithLetterPathsAndContents(
@@ -216,6 +208,7 @@ async function updateDatabaseWithLetterPathsAndContents(
       .populate("subscriptionPlan")
       .populate("creditReport")
       .populate("letters")
+      .populate("documents")
       .select("-password");
 
     res.status(200).json({
@@ -260,7 +253,6 @@ export const downloadAllLetters = async (req, res) => {
 
   archive.finalize();
 };
-
 export const getLetterById = async (req, res) => {
   const { letterId } = req.params;
 
@@ -271,89 +263,134 @@ export const getLetterById = async (req, res) => {
     }
 
     const letterPath = letter.letterPaths.id(letterId);
-    const fullPath = path.resolve(letterPath.path);
-
-    // Read the file path as binary
-    const letterFsPath = await fsPromises.readFile(fullPath);
     const content = letterPath.content;
+    const filePath = letterPath.path;
 
-    // Send the binary path as a base64 encoded string
+    
+    const pdfBuffer = fs.readFileSync(filePath);
+    const pdfBase64 = pdfBuffer.toString("base64");
+
     res.json({
-      letterPath: letterFsPath.toString("base64"),
+      letterPath: pdfBase64,
+      content,
       bureau: letterPath.bureau,
-      content: content,
     });
   } catch (error) {
-    console.error("Error fetching letter content:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// Update letter content by ID
 export const updateLetterById = async (req, res) => {
   const { letterId } = req.params;
   const { content, userId } = req.body;
 
   try {
-    // Fetch the existing letter from the database
     const letter = await Letters.findOne({ "letterPaths._id": letterId });
     if (!letter) {
       return res.status(404).json({ message: "Letter not found" });
     }
 
-    // Find the specific letter path entry by ID
-    const letterPathEntry = letter.letterPaths.id(letterId);
-    if (!letterPathEntry) {
-      return res.status(404).json({ message: "Letter path entry not found" });
+
+    const _user = await User.findOne({_id : userId}).populate('documents');
+
+    if(!_user){
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // Delete the existing PDF (if file exists)
-    const existingPdfPath = path.resolve(letterPathEntry.path);
-    if (fs.existsSync(existingPdfPath)) {
-      fs.unlinkSync(existingPdfPath);
-    }
 
-    // Create a new PDF with the updated content
-    const plainTextContent = convertToPlainText(content);
-    const pdfDoc = await PdfLibDocument.create();
-    const page = pdfDoc.addPage([600, 800]);
-    const { width, height } = page.getSize();
+    
 
-    page.drawText(plainTextContent, {
-      x: 50,
-      y: height - 50,
-      size: 12,
-      color: rgb(0, 0, 0),
-    });
+    const letterPath = letter.letterPaths.id(letterId);
+    const fullPath = path.resolve(letterPath.path);
 
-    // Save the new PDF to a file
-    const newPdfBytes = await pdfDoc.save();
-    const newPdfPath = `./public/Dispute_Letter_${letterPathEntry.bureau}_${letterId}.pdf`;
-    fs.writeFileSync(newPdfPath, newPdfBytes);
+    // Generate a new PDF with the updated HTML content
+    await generatePDF(fullPath, content, _user?.documents);
 
-    // Update the letter content and the PDF path in the database
-    letterPathEntry.content = content; // Store HTML content
-    letterPathEntry.path = newPdfPath;
-
-    // Save the updated letter back to the database
+    letterPath.content = content;
     await letter.save();
 
-    const user = await User.findOne({ _id: userId })
-      .populate("subscriptionPlan")
-      .populate("creditReport")
-      .populate("letters");
+const user = await User.findOne({ _id: userId })
+  .populate("subscriptionPlan")
+  .populate("creditReport")
+  .populate("documents")
+  .populate("letters");
 
-    res.json({
-      message: "Letter content and PDF updated successfully",
-      content: content,
-      pdfPath: newPdfPath,
-      user,
-    });
+    res.json({ user, message: "Letter updated successfully" });
   } catch (error) {
-    console.error("Error updating letter content and PDF:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
+
+// New function to generate PDF
+async function generatePDF(filePath, htmlContent, documents) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const pdfDoc = new PDFDocument();
+      const stream = fs.createWriteStream(filePath);
+
+      pdfDoc.pipe(stream);
+
+      const textContent = htmlToText(htmlContent, {
+        wordwrap: 130,
+      });
+
+      pdfDoc.font("Times-Roman").fontSize(12).text(textContent, 100, 100);
+
+      if (documents && documents.length > 0) {
+        for (const doc of documents) {
+          try {
+            // Extract the correct path from the URL
+            const imageUrl = doc.path;
+
+            // Fetch the image
+            const response = await axios.get(imageUrl, {
+              responseType: "arraybuffer",
+            });
+
+            // Embed the image into the PDF
+            const image = response.data;
+            const extension = path.extname(imageUrl).toLowerCase();
+            const imageType =
+              extension === ".jpg" || extension === ".jpeg" ? "JPEG" : "PNG";
+
+            pdfDoc.addPage();
+            pdfDoc.image(image, {
+              fit: [500, 400],
+              align: "center",
+              valign: "center",
+            });
+          } catch (docError) {
+            console.error(`Error processing document ${doc.path}:`, docError);
+            continue;
+          }
+        }
+      }
+
+      pdfDoc.end();
+
+      stream.on("finish", () => {
+        console.log("PDF generation finished.");
+        resolve();
+      });
+
+      stream.on("error", (error) => {
+        console.error("Error writing PDF to file:", error);
+        reject(error);
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      reject(error);
+    }
+  });
+}
+
+
+
+
+
+
+
+
 
 // Function to fetch image as bytes
 const fetchImageAsBytes = async (imageUrl) => {

@@ -8,8 +8,11 @@ const CreditReportSchema = new mongoose.Schema(
       required: true,
     },
     creditReportData: {
-      // This will allow dynamic keys for the credit report entries
       type: mongoose.Schema.Types.Mixed,
+      required: true,
+    },
+    filePath: {
+      type: String,
       required: true,
     },
     round : {

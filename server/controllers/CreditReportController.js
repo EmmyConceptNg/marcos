@@ -42,14 +42,14 @@ export const uploadRecord = async (req, res) => {
         console.error(err);
         return res.status(500).send("Error reading HTML file");
       }
-      parseHtmlAndStore(data, userId, res);
-      cleanUpTempFile(filePath);
+      parseHtmlAndStore(data, userId, filePath, res);
+      // cleanUpTempFile(filePath);
     });
   } else if (req.file.mimetype === "application/pdf") {
     try {
       const textContent = await convertPdfToText(filePath);
       if (textContent && textContent.trim().length > 0) {
-        parsePdfAndStore(textContent, userId, res);
+        parsePdfAndStore(textContent, userId, filePath, res);
       } else {
         console.error("Invalid text content extracted from PDF");
         res.status(500).send("Error converting PDF file: Invalid content");
@@ -70,7 +70,7 @@ const convertPdfToText = async (pdfPath) => {
   return data.text;
 };
 
-const parseHtmlAndStore = async (htmlContent, userId, res) => {
+const parseHtmlAndStore = async (htmlContent, userId, filePath, res) => {
   const $ = cheerio.load(htmlContent);
   let creditReportData = {};
 
@@ -181,7 +181,7 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
   try {
     const document = await CreditReport.findOneAndUpdate(
       { userId },
-      { $set: { creditReportData }, $inc: { round: 1 } },
+      { $set: { creditReportData }, $inc: { round: 1 }, filePath },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
@@ -193,6 +193,7 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
       .populate("subscriptionPlan")
       .populate("creditReport")
       .populate("documents")
+      .populate("letters")
       .select("-password");
 
     res.status(200).json({ user, report: document });
@@ -202,7 +203,7 @@ const parseHtmlAndStore = async (htmlContent, userId, res) => {
   }
 };
 
-const parsePdfAndStore = async (textContent, userId, res) => {
+const parsePdfAndStore = async (textContent, userId, filePath, res) => {
   const lines = textContent.split("\n").map((line) => line.trim());
   let creditReportData = {};
 

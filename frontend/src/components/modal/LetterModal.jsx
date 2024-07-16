@@ -70,6 +70,7 @@ import {
 
 import "ckeditor5/ckeditor5.css";
 import { htmlToText } from "html-to-text";
+import { ToastContainer } from "react-toastify";
 
 
 
@@ -78,32 +79,13 @@ const style = {
   top: "50%",
   left: "50%",
   transform: "translate(-50%, -50%)",
-  width: "80vw",
+  width: {md :"80vw", xs : "100vw"},
   height: "80vh",
   bgcolor: "background.paper",
   boxShadow: 24,
   display: "flex",
   flexDirection: "column",
   p: 4,
-};
-
-// Utility functions for base64 encoding/decoding
-const base64ToUint8Array = (base64) => {
-  const binaryString = window.atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-};
-
-const uint8ArrayToBase64 = (uint8Array) => {
-  let binaryString = "";
-  for (let i = 0; i < uint8Array.length; i++) {
-    binaryString += String.fromCharCode(uint8Array[i]);
-  }
-  return window.btoa(binaryString);
 };
 
 export default function LetterModal({
@@ -116,209 +98,215 @@ export default function LetterModal({
   letterBureau,
   handleSaveLetter,
   selectedLetter,
+  setSelectedLetter,
   user,
 }) {
-
-
-
   // CK EDITOR CONFIG
 
-  	const editorContainerRef = useRef(null);
-	const editorMenuBarRef = useRef(null);
-	const editorToolbarRef = useRef(null);
-	const editorRef = useRef(null);
-	const [isLayoutReady, setIsLayoutReady] = useState(false);
+  const editorContainerRef = useRef(null);
+  const editorMenuBarRef = useRef(null);
+  const editorToolbarRef = useRef(null);
+  const editorRef = useRef(null);
+  const [isLayoutReady, setIsLayoutReady] = useState(false);
 
-	useEffect(() => {
-		setIsLayoutReady(true);
+  useEffect(() => {
+    setIsLayoutReady(true);
 
-		return () => setIsLayoutReady(false);
-	}, []);
+    return () => setIsLayoutReady(false);
+  }, []);
 
-	const editorConfig = {
-		toolbar: {
-			items: [
-				'undo',
-				'redo',
-				'|',
-				'heading',
-				'|',
-				'fontSize',
-				'fontFamily',
-				'fontColor',
-				'fontBackgroundColor',
-				'|',
-				'bold',
-				'italic',
-				'underline',
-				'|',
-				'link',
-				'insertImageViaUrl',
-				'insertTable',
-				'highlight',
-				'blockQuote',
-				'|',
-				'alignment',
-				'|',
-				'indent',
-				'outdent'
-			],
-			shouldNotGroupWhenFull: false
-		},
-		plugins: [
-			AccessibilityHelp,
-			Alignment,
-			Autoformat,
-			AutoImage,
-			AutoLink,
-			Autosave,
-			BalloonToolbar,
-			BlockQuote,
-			Bold,
-			Code,
-			Essentials,
-			FindAndReplace,
-			FontBackgroundColor,
-			FontColor,
-			FontFamily,
-			FontSize,
-			Heading,
-			Highlight,
-			HorizontalLine,
-			ImageBlock,
-			ImageCaption,
-			ImageInline,
-			ImageInsertViaUrl,
-			ImageResize,
-			ImageStyle,
-			ImageTextAlternative,
-			ImageToolbar,
-			Indent,
-			IndentBlock,
-			Italic,
-			Link,
-			LinkImage,
-			Paragraph,
-			RemoveFormat,
-			SelectAll,
-			SpecialCharacters,
-			SpecialCharactersArrows,
-			SpecialCharactersCurrency,
-			SpecialCharactersEssentials,
-			SpecialCharactersLatin,
-			SpecialCharactersMathematical,
-			SpecialCharactersText,
-			Strikethrough,
-			Subscript,
-			Superscript,
-			Table,
-			TableCaption,
-			TableCellProperties,
-			TableColumnResize,
-			TableProperties,
-			TableToolbar,
-			TextTransformation,
-			Underline,
-			Undo
-		],
-		balloonToolbar: ['bold', 'italic', '|', 'link'],
-		fontFamily: {
-			supportAllValues: true
-		},
-		fontSize: {
-			options: [10, 12, 14, 'default', 18, 20, 22],
-			supportAllValues: true
-		},
-		heading: {
-			options: [
-				{
-					model: 'paragraph',
-					title: 'Paragraph',
-					class: 'ck-heading_paragraph'
-				},
-				{
-					model: 'heading1',
-					view: 'h1',
-					title: 'Heading 1',
-					class: 'ck-heading_heading1'
-				},
-				{
-					model: 'heading2',
-					view: 'h2',
-					title: 'Heading 2',
-					class: 'ck-heading_heading2'
-				},
-				{
-					model: 'heading3',
-					view: 'h3',
-					title: 'Heading 3',
-					class: 'ck-heading_heading3'
-				},
-				{
-					model: 'heading4',
-					view: 'h4',
-					title: 'Heading 4',
-					class: 'ck-heading_heading4'
-				},
-				{
-					model: 'heading5',
-					view: 'h5',
-					title: 'Heading 5',
-					class: 'ck-heading_heading5'
-				},
-				{
-					model: 'heading6',
-					view: 'h6',
-					title: 'Heading 6',
-					class: 'ck-heading_heading6'
-				}
-			]
-		},
-		image: {
-			toolbar: [
-				'toggleImageCaption',
-				'imageTextAlternative',
-				'|',
-				'imageStyle:inline',
-				'imageStyle:wrapText',
-				'imageStyle:breakText',
-				'|',
-				'resizeImage'
-			]
-		},
-		
-		link: {
-			addTargetToExternalLinks: true,
-			defaultProtocol: 'https://',
-			decorators: {
-				toggleDownloadable: {
-					mode: 'manual',
-					label: 'Downloadable',
-					attributes: {
-						download: 'file'
-					}
-				}
-			}
-		},
-		menuBar: {
-			isVisible: true
-		},
-		placeholder: 'Type or paste your content here!',
-		table: {
-			contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties']
-		}
-	};
-  
+  const editorConfig = {
+    toolbar: {
+      items: [
+        "undo",
+        "redo",
+        "|",
+        "heading",
+        "|",
+        "fontSize",
+        "fontFamily",
+        "fontColor",
+        "fontBackgroundColor",
+        "|",
+        "bold",
+        "italic",
+        "underline",
+        "|",
+        "link",
+        "insertImageViaUrl",
+        "insertTable",
+        "highlight",
+        "blockQuote",
+        "|",
+        "alignment",
+        "|",
+        "indent",
+        "outdent",
+      ],
+      shouldNotGroupWhenFull: false,
+    },
+    plugins: [
+      AccessibilityHelp,
+      Alignment,
+      Autoformat,
+      AutoImage,
+      AutoLink,
+      Autosave,
+      BalloonToolbar,
+      BlockQuote,
+      Bold,
+      Code,
+      Essentials,
+      FindAndReplace,
+      FontBackgroundColor,
+      FontColor,
+      FontFamily,
+      FontSize,
+      Heading,
+      Highlight,
+      HorizontalLine,
+      ImageBlock,
+      ImageCaption,
+      ImageInline,
+      ImageInsertViaUrl,
+      ImageResize,
+      ImageStyle,
+      ImageTextAlternative,
+      ImageToolbar,
+      Indent,
+      IndentBlock,
+      Italic,
+      Link,
+      LinkImage,
+      Paragraph,
+      RemoveFormat,
+      SelectAll,
+      SpecialCharacters,
+      SpecialCharactersArrows,
+      SpecialCharactersCurrency,
+      SpecialCharactersEssentials,
+      SpecialCharactersLatin,
+      SpecialCharactersMathematical,
+      SpecialCharactersText,
+      Strikethrough,
+      Subscript,
+      Superscript,
+      Table,
+      TableCaption,
+      TableCellProperties,
+      TableColumnResize,
+      TableProperties,
+      TableToolbar,
+      TextTransformation,
+      Underline,
+      Undo,
+    ],
+    balloonToolbar: ["bold", "italic", "|", "link"],
+    fontFamily: {
+      supportAllValues: true,
+    },
+    fontSize: {
+      options: [10, 12, 14, "default", 18, 20, 22],
+      supportAllValues: true,
+    },
+    heading: {
+      options: [
+        {
+          model: "paragraph",
+          title: "Paragraph",
+          class: "ck-heading_paragraph",
+        },
+        {
+          model: "heading1",
+          view: "h1",
+          title: "Heading 1",
+          class: "ck-heading_heading1",
+        },
+        {
+          model: "heading2",
+          view: "h2",
+          title: "Heading 2",
+          class: "ck-heading_heading2",
+        },
+        {
+          model: "heading3",
+          view: "h3",
+          title: "Heading 3",
+          class: "ck-heading_heading3",
+        },
+        {
+          model: "heading4",
+          view: "h4",
+          title: "Heading 4",
+          class: "ck-heading_heading4",
+        },
+        {
+          model: "heading5",
+          view: "h5",
+          title: "Heading 5",
+          class: "ck-heading_heading5",
+        },
+        {
+          model: "heading6",
+          view: "h6",
+          title: "Heading 6",
+          class: "ck-heading_heading6",
+        },
+      ],
+    },
+    image: {
+      toolbar: [
+        "toggleImageCaption",
+        "imageTextAlternative",
+        "|",
+        "imageStyle:inline",
+        "imageStyle:wrapText",
+        "imageStyle:breakText",
+        "|",
+        "resizeImage",
+      ],
+    },
+
+    link: {
+      addTargetToExternalLinks: true,
+      defaultProtocol: "https://",
+      decorators: {
+        toggleDownloadable: {
+          mode: "manual",
+          label: "Downloadable",
+          attributes: {
+            download: "file",
+          },
+        },
+      },
+    },
+    menuBar: {
+      isVisible: true,
+    },
+    placeholder: "Type or paste your content here!",
+    table: {
+      contentToolbar: [
+        "tableColumn",
+        "tableRow",
+        "mergeTableCells",
+        "tableProperties",
+        "tableCellProperties",
+      ],
+    },
+  };
+
   // END CONFIG
 
-
-
-
-
-
-
-  const handleClose = () => setOpen(false);
+  const handleClose = () =>{ 
+    setSelectedLetter("");
+    setLetterPath("");
+    setLetterContent("");
+    setEditContent("");
+    setIsEditing(false)
+    setOpen(false);
+  };
   const [isEditing, setIsEditing] = useState(false);
+  const [rewriting, setRewriting] = useState(false);
   const [editContent, setEditContent] = useState(letterContent);
   const [buyCredit, setBuyCredit] = useState(false);
   const [changingLanguage, setChangingLanguage] = useState(false);
@@ -339,35 +327,16 @@ export default function LetterModal({
       console.log("Original letterPath:", letterPath);
       console.log("Decoded letterPath:", atob(letterPath));
 
-      const pdfBytes = base64ToUint8Array(letterPath);
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-      const firstPage = pdfDoc.getPages()[0];
-      const { width, height } = firstPage.getSize();
-
-      // Clear existing content before adding new text
-      firstPage.drawRectangle({
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
-        color: rgb(1, 1, 1),
-      });
-
-      const plainTextContent = convertToPlainText(editContent);
-
-      firstPage.drawText(plainTextContent, {
-        x: 50,
-        y: height - 50,
-        size: 12,
-        color: rgb(0, 0, 0),
-      });
-
-      const newPdfBytes = await pdfDoc.save();
-      const modifiedBase64 = uint8ArrayToBase64(new Uint8Array(newPdfBytes));
-
       setLetterContent(editContent); // Update the text content
-      await handleSaveLetter(editContent, modifiedBase64); // Save both content and updated PDF
+
+      axios.put(`/api/letters/${selectedLetter}`, {
+        userId: user?._id,
+        content: editContent,
+        bureauName: letterBureau,
+      });
+
       setIsEditing(false);
+      await handleSaveLetter(editContent); // Save both content and updated PDF
     } catch (error) {
       console.error("Error saving editing:", error);
     }
@@ -375,34 +344,36 @@ export default function LetterModal({
 
   const changeLanguage = (language) => {
     setChangingLanguage(true);
+    notify(`Changing language. Please hold on `, "info");
     axios
       .post("/api/utils/language", { language, letterContent })
       .then((response) => {
         setEditContent(response.data.letterContent);
         setChangingLanguage(false);
+        notify(`language changed to ${language} `, "success");
       })
       .finally(() => {
-        notify(`language changed to ${language} `, "success");
         setChangingLanguage(false);
       });
   };
-
-  const handleNotarize = () => {
-    setChangingLanguage(true);
+  const rewrite = (tone) => {
+    setRewriting(true);
+    notify(`Re-writing document. Please hold on `, "info");
     axios
-      .post(`/api/letters/${selectedLetter}/notarize`, { userId: user?._id })
+      .post("/api/utils/rewrite", { tone, letterContent })
       .then((response) => {
-        setLetterPath(response.data.letterPath);
-        dispatch(setUser(response.data.user));
-        notify(`Letter Notarized`, "success");
+        setEditContent(response.data.letterContent);
+        setRewriting(false);
+        notify(`Document re-written successfully `, "success");
       })
       .finally(() => {
-        handleClose();
+        setRewriting(false);
       });
   };
 
   return (
     <>
+      <ToastContainer />
       <Modal
         open={open}
         onClose={handleClose}
@@ -415,7 +386,7 @@ export default function LetterModal({
             {!isEditing ? (
               <iframe
                 src={`data:application/pdf;base64,${letterPath}`}
-                title="PDF Letter"
+                title={`${letterBureau}`}
                 width="100%"
                 height="500px"
                 style={{ flex: 1 }}
@@ -470,7 +441,6 @@ export default function LetterModal({
                     </div>
                   </div>
                 </div>
-                
               </Box>
             )}
           </Stack>
@@ -481,6 +451,46 @@ export default function LetterModal({
             <Stack spacing={2} direction="row">
               {isEditing ? (
                 <>
+                  <Button
+                    variant="outlined"
+                    loading={rewriting}
+                    width="100px"
+                    sx={{ mx: 3 }}
+                    color="#131C30"
+                    dropdown
+                    dropdownItems={[
+                      {
+                        text: "Casual",
+                        onClick: () => rewrite("casual"),
+                      },
+                      {
+                        text: "Professional",
+                        onClick: () => rewrite("professional"),
+                      },
+                      {
+                        text: "Persuasive",
+                        onClick: () => rewrite("persuasive"),
+                      },
+                      {
+                        text: "Respectful",
+                        onClick: () => rewrite("respectful"),
+                      },
+                      {
+                        text: "Bold",
+                        onClick: () => rewrite("bold"),
+                      },
+                      {
+                        text: "Masculine",
+                        onClick: () => rewrite("masculine"),
+                      },
+                      {
+                        text: "Feminine",
+                        onClick: () => rewrite("feminine"),
+                      },
+                    ]}
+                  >
+                    Rewrite
+                  </Button>
                   <Button
                     variant="outlined"
                     loading={changingLanguage}
@@ -501,15 +511,15 @@ export default function LetterModal({
                   >
                     Change Language
                   </Button>
-                  <Button variant="contained" onClick={saveEditing}>
+                  <Button
+                    variant="contained"
+                    onClick={saveEditing}
+                  >
                     Save
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button variant="contained" onClick={handleNotarize}>
-                    Notarize
-                  </Button>
                   <Button variant="contained" onClick={startEditing}>
                     Edit
                   </Button>

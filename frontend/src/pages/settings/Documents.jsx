@@ -19,6 +19,7 @@ import {
   TableCell,
   TableBody,
 } from "@mui/material";
+import Swal from "sweetalert2";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "../../api/axios";
 import PropTypes from "prop-types";
@@ -35,7 +36,7 @@ import EditDocIcon from "../../components/svgs/EditDocIcon";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import ReportModal from "../../components/modal/ReportModal";
-import { hasProofOfAddress, hasUtilityBill } from "../../utils/helper";
+import { hasID, hasProofOfAddress } from "../../utils/helper";
 
 export default function Documents() {
   const user = useSelector((state) => state.user.details);
@@ -43,7 +44,7 @@ export default function Documents() {
   const [openModal, setOpenModal] = useState(false);
   const [openReport, setOpenReport] = useState(false);
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleDocumetModal = () => {
     setOpenModal(true);
@@ -60,14 +61,12 @@ export default function Documents() {
     },
   ];
 
-
-
   const handleUploadFromComputer = () => {
-   if(!hasUtilityBill(user) || !hasProofOfAddress(user)){
-      notify('You need to upload a proof of address and Utility Bill', 'info');
-        setTimeout(() => {
-          navigate("/dashboard/settings?proof=true");
-        }, 2000);
+    if (!hasProofOfAddress(user) || !hasID(user)) {
+      notify("You need to upload a proof of address and a valid ID", "info");
+      setTimeout(() => {
+        navigate("/dashboard/settings?proof=true");
+      }, 2000);
 
       return false;
     }
@@ -106,7 +105,7 @@ export default function Documents() {
                 error.response?.data.error || "Error Uploading Credit Report",
                 "error"
               );
-            })
+            });
         } else {
           alert("Only PDF and HTML files are allowed.");
         }
@@ -120,10 +119,7 @@ export default function Documents() {
     <Box mt={3} px={3} pb={3}>
       <ToastContainer />
       <DocumentModal open={openModal} setOpen={setOpenModal} />
-      <ReportModal
-        open={openReport}
-        setOpen={setOpenReport}
-      />
+      <ReportModal open={openReport} setOpen={setOpenReport} />
       <Stack direction="row" justifyContent="space-between">
         <Text fw="500" fs="24px">
           Identification
@@ -147,7 +143,7 @@ export default function Documents() {
         <Grid container spacing={2}>
           {user?.documents?.map((document, index) => (
             <Grid item lg={4} md={6} xs={12} key={index}>
-              <Doc name={document.name} path={document.path} />
+              <Doc name={document.name} path={document.path} user={user?._id} />
             </Grid>
           ))}
         </Grid>
@@ -285,12 +281,39 @@ export default function Documents() {
   );
 }
 
-const Doc = ({ name, path }) => {
+const Doc = ({ name, path, user }) => {
   const displayName = name?.replace(/_/g, " ");
   const [open, setOpen] = useState(false);
 
+  const dispatch = useDispatch();
+
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
+
+  const handleDelete = () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axios
+          .post("/api/utils/remove-document/", { user, path })
+          .then((response) => {
+            dispatch(setUser(response.data.user));
+            Swal.fire({
+              title: "Deleted!",
+              text: "Document file has been deleted.",
+              icon: "success",
+            });
+          });
+      }
+    });
+  };
 
   return (
     <>
@@ -326,6 +349,7 @@ const Doc = ({ name, path }) => {
           {displayName}
         </Typography>
         <Typography
+          onClick={handleDelete}
           sx={{
             textTransform: "capitalize",
             fontSize: "18px",

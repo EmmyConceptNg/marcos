@@ -28,10 +28,10 @@ export function formatCurrency(number, currencySymbol = "$") {
 
 
 
-export const hasUtilityBill = (user) =>{
+export const hasID = (user) =>{
 
   
-  return user?.documents?.some((doc) => doc.name === "utility_bill");
+  return user?.documents?.some((doc) => doc.name === "id");
 }
 export const hasProofOfAddress = (user)=>{
   return user?.documents?.some((doc) => doc.name === "proof_of_address");

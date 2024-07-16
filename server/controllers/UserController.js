@@ -251,6 +251,7 @@ export const updateImage = async (req, res) => {
       .populate("subscriptionPlan")
       .populate("creditReport")
       .populate("documents")
+      .populate("letters")
       .select("-password")
       .then((user) => {
         res.status(200).json({ user });

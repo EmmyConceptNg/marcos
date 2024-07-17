@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import Text from "../../../components/Text";
 import SearchInput from "../../../components/Search";
-import { FilterList, MoreVert } from "@mui/icons-material";
+import { FilterList } from "@mui/icons-material";
 import Button from "../../../components/Button";
 import { Helmet } from "react-helmet";
 import { useDispatch, useSelector } from "react-redux";

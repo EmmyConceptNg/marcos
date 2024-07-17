@@ -26,7 +26,6 @@ import PropTypes from "prop-types";
 import { notify } from "../../utils/Index";
 import { setUser } from "../../redux/UserReducer";
 import { ToastContainer } from "react-toastify";
-import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import Button from "../../components/Button";
 import Text from "../../components/Text";

@@ -4,10 +4,8 @@ import Text from "../Text";
 import Button from "../Button";
 import BuyCreditModal from "./BuyCreditModal";
 import PropTypes from "prop-types";
-import { PDFDocument, rgb } from "pdf-lib";
 import axios from "../../api/axios";
 import { notify } from "../../utils/Index";
-import { setUser } from "../../redux/UserReducer";
 import { useDispatch } from "react-redux";
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import {
@@ -310,12 +308,6 @@ export default function LetterModal({
   const [editContent, setEditContent] = useState(letterContent);
   const [buyCredit, setBuyCredit] = useState(false);
   const [changingLanguage, setChangingLanguage] = useState(false);
-
-  const dispatch = useDispatch();
-
-  const convertToPlainText = (html) => {
-    return htmlToText(html, { wordwrap: 130 });
-  };
 
   const startEditing = () => {
     setIsEditing(true);

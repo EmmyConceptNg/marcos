@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import { Avatar, Badge, Box, Divider, IconButton, ListItemIcon, Menu, MenuItem, Stack } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EditOutlined, Logout, PersonAdd, PersonOutlined, Settings } from "@mui/icons-material";
 
 
@@ -13,13 +13,20 @@ import NotificationIcon from "../../svgs/NotificationIcon";
 
 
 export default function Nav(){
+
+  const user = useSelector((state) => state.user.details);
+
+  useEffect(() =>{
+    if(!user){
+      navigate('/login')
+    }
+  })
   const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
     const handleClick = (event) => {
       setAnchorEl(event.currentTarget);
     };
-    const user = useSelector((state) => state.user.details);
     const handleClose = () => {
       setAnchorEl(null);
     };

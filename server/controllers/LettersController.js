@@ -51,7 +51,7 @@ export const createLetters = async (req, res) => {
 
       console.log(`Generating letter for ${bureau.name}`);
 
-      const htmlContent = await generateLetterContent(
+      const { htmlContent, imageUrl } = await generateLetterContent(
         bureauCode,
         disputes,
         accounts,
@@ -59,7 +59,7 @@ export const createLetters = async (req, res) => {
         user
       );
 
-      await generatePDF(filePath, htmlContent, user.documents);
+      await generatePDF(filePath, htmlContent, user.documents, imageUrl);
 
       letterPaths.push({
         bureau: bureau.name,
@@ -68,7 +68,11 @@ export const createLetters = async (req, res) => {
       });
 
       if (letterPaths.length === Object.keys(bureaus).length) {
-        await updateDatabaseWithLetterPathsAndContents(userId, letterPaths, res);
+        await updateDatabaseWithLetterPathsAndContents(
+          userId,
+          letterPaths,
+          res
+        );
       }
     }
   } catch (error) {
@@ -89,6 +93,7 @@ async function generateLetterContent(
   const ssnString = user.ssn.toString().padStart(9, "0");
   const last4SSN = ssnString.slice(-4);
 
+  // Original content generation logic
   let content = `Generate a professional credit repair letter with the format below and if possible,
   
   Name: ${user.fullName}
@@ -173,15 +178,24 @@ ${user.fullName}`;
       max_tokens: 1024,
     });
 
-    // Log the entire completion object to inspect its structure
-    console.log(`Received completion:`, completion.choices[0].message.content);
-
-    // Assuming the response structure matches the documentation:
     const letterContent = completion.choices[0].message.content.trim();
-    // return letterContent;
+
+    // Generate the image with DALL-E
+    // const imageResponse = await openai.images.generate({
+    //   model: "dall-e-3",
+    //   prompt: `Generate the Bureau Credit Report that shows the credit report and highlights the negative values of ${personalItems}, ${accountItems} and ${inquiryItems}`,
+    // });
+
+    const imageResponse = await openai.images.edit({
+      image: fs.createReadStream("public/images/temp/temp.png"),
+      prompt: `Generate the Bureau Credit Report that shows the credit report and highlights the negative values of ${personalItems}, ${accountItems} and ${inquiryItems}`,
+    });
+
+    // Assuming the first image in the response
+    const imageUrl = imageResponse.data[0].url;
 
     const htmlContent = convertToHtml(letterContent);
-    return htmlContent;
+    return { htmlContent, imageUrl };
   } catch (error) {
     console.error("Error generating letter content with OpenAI:", error);
     throw new Error(
@@ -322,7 +336,7 @@ const user = await User.findOne({ _id: userId })
 };
 
 // New function to generate PDF
-async function generatePDF(filePath, htmlContent, documents) {
+async function generatePDF(filePath, htmlContent, documents, imageUrl) {
   return new Promise(async (resolve, reject) => {
     try {
       const pdfDoc = new PDFDocument();
@@ -335,6 +349,29 @@ async function generatePDF(filePath, htmlContent, documents) {
       });
 
       pdfDoc.font("Times-Roman").fontSize(12).text(textContent, 100, 100);
+
+      if (imageUrl) {
+        try {
+          // Fetch the image
+          const response = await axios.get(imageUrl, {
+            responseType: "arraybuffer",
+          });
+
+          const image = response.data;
+          const extension = path.extname(imageUrl).toLowerCase();
+          const imageType =
+            extension === ".jpg" || extension === ".jpeg" ? "JPEG" : "PNG";
+
+          pdfDoc.addPage();
+          pdfDoc.image(image, {
+            fit: [500, 400],
+            align: "center",
+            valign: "center",
+          });
+        } catch (imgError) {
+          console.error(`Error fetching image:`, imgError);
+        }
+      }
 
       if (documents && documents.length > 0) {
         for (const doc of documents) {

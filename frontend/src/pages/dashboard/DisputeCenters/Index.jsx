@@ -282,7 +282,7 @@ export default function DisputeCenters() {
                   src="/assets/icons/writing.gif"
                   sx={{ width: "200px", height:'200px', borderRadius: "100%" }}
                 />
-                <Text color="#fff" sx={{ fontWeight: "bold", mt: 2 }}>
+                <Text color="#fff" fs="18px" fw="500" sx={{ mt: 2 }}>
                   Disputing... Please Wait...
                 </Text>
               </Box>

@@ -180,15 +180,10 @@ ${user.fullName}`;
 
     const letterContent = completion.choices[0].message.content.trim();
 
-    // Generate the image with DALL-E
-    // const imageResponse = await openai.images.generate({
-    //   model: "dall-e-3",
-    //   prompt: `Generate the Bureau Credit Report that shows the credit report and highlights the negative values of ${personalItems}, ${accountItems} and ${inquiryItems}`,
-    // });
-
     const imageResponse = await openai.images.edit({
       image: fs.createReadStream("public/images/temp/temp.png"),
-      prompt: `Generate the Bureau Credit Report that shows the credit report and highlights the negative values of ${personalItems}, ${accountItems} and ${inquiryItems}`,
+      size: '256x256',
+      prompt: `Generate the Bureau Credit Report that looks like this and circle the negative values of ${personalItems}, ${accountItems} and ${inquiryItems}`,
     });
 
     // Assuming the first image in the response

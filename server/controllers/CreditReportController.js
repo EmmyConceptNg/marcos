@@ -3,6 +3,9 @@ import fs from "fs";
 import cheerio from "cheerio";
 import User from "../models/User.js";
 import pdf from "pdf-parse-debugging-disabled";
+import axios from "axios";
+import FormData from "form-data";
+import path from "path";
 
 // CreditReport controller
 export const getCreditReport = async (req, res) => {
@@ -203,56 +206,80 @@ const parseHtmlAndStore = async (htmlContent, userId, filePath, res) => {
   }
 };
 
-const parsePdfAndStore = async (textContent, userId, filePath, res) => {
-  const lines = textContent.split("\n").map((line) => line.trim());
-  let creditReportData = {};
-
-  let currentSection = null;
-  let accounts = [];
-  let publicInformation = [];
-  let inquiries = [];
-  let otherSectionData = [];
-
-  lines.forEach((line) => {
-    if (line.match(/TransUnion|Experian|Equifax/)) {
-      currentSection = "threeBureauData";
-      return;
-    }
-
-    if (line.startsWith("Account History")) {
-      currentSection = "account_history";
-      if (!creditReportData.account_history) {
-        creditReportData.account_history = [];
-      }
-      return;
-    }
-
-    if (line.startsWith("Public Information")) {
-      currentSection = "public_information";
-      return;
-    }
-
-    if (line.startsWith("Inquiries")) {
-      currentSection = "inquiries";
-      return;
-    }
-
-    if (currentSection === "account_history") {
-      handleAccountHistoryPdf(line, accounts);
-    } else if (currentSection === "public_information") {
-      handlePublicInformationPdf(line, publicInformation);
-    } else if (currentSection === "inquiries") {
-      handleInquiriesPdf(line, inquiries);
-    } else if (currentSection === "threeBureauData") {
-      handleThreeBureauDataPdf(line, otherSectionData);
-    }
-  });
-
-  creditReportData["account_history"] = accounts;
-  creditReportData["public_information"] = publicInformation;
-  creditReportData["inquiries"] = inquiries;
-
+const parsePdfAndStore = async (filePath, userId, res) => {
   try {
+    const apiKey = "YOUR_OCR_SPACE_API_KEY"; // Replace with your OCR.space API key
+
+    const form = new FormData();
+    form.append("apikey", apiKey);
+    form.append("language", "eng");
+    form.append("isOverlayRequired", "true");
+    form.append("file", fs.createReadStream(filePath));
+
+    const { data: ocrResult } = await axios.post(
+      "https://api.ocr.space/parse/image",
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+        },
+      }
+    );
+
+    if (ocrResult.IsErroredOnProcessing) {
+      console.error("Error during OCR processing:", ocrResult.ErrorMessage);
+      return res.status(500).json({ message: "OCR processing error" });
+    }
+
+    const textContent = ocrResult.ParsedResults[0].ParsedText;
+    const lines = textContent.split("\n").map((line) => line.trim());
+    let creditReportData = {};
+
+    let currentSection = null;
+    let accounts = [];
+    let publicInformation = [];
+    let inquiries = [];
+    let otherSectionData = [];
+
+    lines.forEach((line) => {
+      if (line.match(/TransUnion|Experian|Equifax/)) {
+        currentSection = "threeBureauData";
+        return;
+      }
+
+      if (line.startsWith("Account History")) {
+        currentSection = "account_history";
+        if (!creditReportData.account_history) {
+          creditReportData.account_history = [];
+        }
+        return;
+      }
+
+      if (line.startsWith("Public Information")) {
+        currentSection = "public_information";
+        return;
+      }
+
+      if (line.startsWith("Inquiries")) {
+        currentSection = "inquiries";
+        return;
+      }
+
+      if (currentSection === "account_history") {
+        handleAccountHistoryPdf(line, accounts);
+      } else if (currentSection === "public_information") {
+        handlePublicInformationPdf(line, publicInformation);
+      } else if (currentSection === "inquiries") {
+        handleInquiriesPdf(line, inquiries);
+      } else if (currentSection === "threeBureauData") {
+        handleThreeBureauDataPdf(line, otherSectionData);
+      }
+    });
+
+    creditReportData["account_history"] = accounts;
+    creditReportData["public_information"] = publicInformation;
+    creditReportData["inquiries"] = inquiries;
+
     const document = await CreditReport.findOneAndUpdate(
       { userId },
       { $set: { creditReportData }, $inc: { round: 1 } },
@@ -271,8 +298,15 @@ const parsePdfAndStore = async (textContent, userId, filePath, res) => {
 
     res.status(200).json({ user, report: document });
   } catch (error) {
-    console.error("Error saving credit report data: ", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error processing PDF file:", error);
+
+    if (typeof res.status === "function") {
+      res.status(500).json({ message: "Internal server error" });
+    } else {
+      console.error("Invalid response object");
+    }
+  } finally {
+    cleanUpTempFile(filePath);
   }
 };
 

@@ -2,6 +2,7 @@ import CreditReport from "../models/CreditReport.js";
 import fs from "fs";
 import cheerio from "cheerio";
 import User from "../models/User.js";
+import pdf from "pdf-parse-debugging-disabled";
 import axios from "axios";
 import FormData from "form-data";
 import path from "path";
@@ -35,40 +36,28 @@ export const uploadRecord = async (req, res) => {
     return res.status(400).json({ message: "File not found" });
   }
 
-  let result;
-
   if (
     req.file.mimetype === "text/html" ||
     req.file.originalname.endsWith(".html")
   ) {
-    fs.readFile(filePath, "utf8", async (err, data) => {
+    fs.readFile(filePath, "utf8", (err, data) => {
       if (err) {
         console.error(err);
         return res.status(500).send("Error reading HTML file");
       }
-      result = await parseHtmlAndStore(data, userId, filePath);
-      if (result.status !== 200) {
-        return res.status(result.status).json({ message: result.message });
-      }
-      cleanUpTempFile(filePath);
-      res.status(200).json(result.data);
+      parseHtmlAndStore(data, userId, filePath, res);
+      // cleanUpTempFile(filePath);
     });
   } else if (req.file.mimetype === "application/pdf") {
     try {
-      const textContent = await convertPdfToText(filePath);
+      const textContent = await convertPdfToText(filePath, res);
       if (textContent) {
-        result = await parsePdfAndStore(textContent, userId, filePath);
+        parsePdfAndStore(textContent, userId, filePath, res);
       } else {
         console.error("Invalid text content extracted from PDF");
-        return res
-          .status(500)
-          .send("Error converting PDF file: Invalid content");
+        return res.status(500).send("Error converting PDF file: Invalid content");
       }
       cleanUpTempFile(filePath);
-      if (result.status !== 200) {
-        return res.status(result.status).json({ message: result.message });
-      }
-      res.status(200).json(result.data);
     } catch (error) {
       console.error("Error converting PDF file", error);
       return res.status(500).send("Error converting PDF file");
@@ -78,7 +67,7 @@ export const uploadRecord = async (req, res) => {
   }
 };
 
-const convertPdfToText = async (pdfPath) => {
+const convertPdfToText = async (pdfPath, res) => {
   const dataBuffer = fs.readFileSync(pdfPath);
   const apiKey = process.env.OCR_API; // Replace with your OCR.space API key
 
@@ -98,17 +87,15 @@ const convertPdfToText = async (pdfPath) => {
     }
   );
 
-console.log(ocrResult.ParsedResults[0].ParsedText);
-
   if (ocrResult.IsErroredOnProcessing) {
     console.error("Error during OCR processing:", ocrResult.ErrorMessage);
-    return null;
+    return res.status(500).json({ message: "OCR processing error" });
   }
 
-  return ocrResult.ParsedResults[0].ParsedText;
+  return $data
 };
 
-const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
+const parseHtmlAndStore = async (htmlContent, userId, filePath, res) => {
   const $ = cheerio.load(htmlContent);
   let creditReportData = {};
 
@@ -234,16 +221,19 @@ const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
       .populate("letters")
       .select("-password");
 
-    return { status: 200, data: { user, report: document } };
+    res.status(200).json({ user, report: document });
   } catch (error) {
     console.error("Error saving credit report data: ", error);
-    return { status: 500, message: "Internal server error" };
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-const parsePdfAndStore = async (pdfContent, userId, filePath) => {
+const parsePdfAndStore = async (pdfContent, userId,filePath, res) => {
   try {
-    const lines = pdfContent.split("\n").map((line) => line.trim());
+   
+
+    const textContent = ocrResult.ParsedResults[0].ParsedText;
+    const lines = textContent.split("\n").map((line) => line.trim());
     let creditReportData = {};
 
     let currentSection = null;
@@ -293,7 +283,7 @@ const parsePdfAndStore = async (pdfContent, userId, filePath) => {
 
     const document = await CreditReport.findOneAndUpdate(
       { userId },
-      { $set: { creditReportData }, $inc: { round: 1 }, filePath },
+      { $set: { creditReportData }, $inc: { round: 1 } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
@@ -307,10 +297,15 @@ const parsePdfAndStore = async (pdfContent, userId, filePath) => {
       .populate("documents")
       .select("-password");
 
-    return { status: 200, data: { user, report: document } };
+    return res.status(200).json({ user, report: document });
   } catch (error) {
     console.error("Error processing PDF file:", error);
-    return { status: 500, message: "Internal server error" };
+
+    if (typeof res.status === "function") {
+      return res.status(500).json({ message: "Internal server error" });
+    } else {
+      console.error("Invalid response object");
+    }
   } finally {
     cleanUpTempFile(filePath);
   }

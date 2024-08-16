@@ -6,9 +6,8 @@ export default function Links() {
       <Stack spacing={2} justifyContent="center" alignItems="center" mt={10}>
         <Box
           component="img"
-          src="assets/logo/logo.svg"
-          width="52px"
-          height="52px"
+          src="assets/logo/logo.png"
+          width="100px"
         />
         <Box>
           <Grid

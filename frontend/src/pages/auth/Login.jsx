@@ -122,7 +122,7 @@ export default function Login() {
               spacing={2}
               sx={{ width: { lg: "520px", sm: "450px", xs: "320px" } }}
             >
-              <Box component="img" src="assets/logo/logo.svg" width="52px" />
+              <Box component="img" src="assets/logo/logo.png" width="100px" />
               <Text fw="550" fs="36px" color="#131C30">
                 Login
               </Text>

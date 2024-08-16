@@ -73,8 +73,8 @@ export default function Header(props) {
           <Box>
             <Box
               component="img"
-              src="/assets/logo/logo.svg"
-              sx={{ height: "72px" }}
+              src="/assets/logo/logo.png"
+              sx={{ width: "100px" }}
             ></Box>
           </Box>
 

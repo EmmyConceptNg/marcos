@@ -180,14 +180,14 @@ ${user.fullName}`;
 
     const letterContent = completion.choices[0].message.content.trim();
 
-    const imageResponse = await openai.images.edit({
-      image: fs.createReadStream("public/images/temp/temp.png"),
-      size: '256x256',
-      prompt: `Generate the Bureau Credit Report that looks like this and circle the negative values of ${personalItems}, ${accountItems} and ${inquiryItems}`,
-    });
+    // const imageResponse = await openai.images.generate({
+    //   model: "dall-e-3",
+    //   prompt: `Generate a tabular report credit report showing the 3 credit bureaus and fill in the  ${personalItems}, ${accountItems} and ${inquiryItems}. Please fill in the actual values and let it look like a professional credit report not just a random image`,
+    // });
 
-    // Assuming the first image in the response
-    const imageUrl = imageResponse.data[0].url;
+    // // Assuming the first image in the response
+    // const imageUrl = imageResponse.data[0].url;
+    const imageUrl = null;
 
     const htmlContent = convertToHtml(letterContent);
     return { htmlContent, imageUrl };

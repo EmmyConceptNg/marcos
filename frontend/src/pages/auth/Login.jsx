@@ -64,30 +64,12 @@ export default function Login() {
       .finally(() => actions.setSubmitting(false));
   };
 
-  const handleLoginGoogle = (values, actions) => {
-    actions.setSubmitting(true);
+   const handleLoginGoogle = (values, actions) => {
+     actions.setSubmitting(true);
+     navigate("/dashboard");
+   };
 
-    axios
-      .post("/api/auth/login/google", values, {
-        headers: { "Content-Type": "application/json" },
-      })
-      .then((response) => {
-        console.log(response.data.user);
-        dispatch(setUser(response.data.user));
-        if (response.data.user.subscriptionPlan.name === "Enterprise") {
-          navigate("/business");
-        } else {
-          navigate("/dashboard");
-        }
-      })
-      .catch((error) => {
-        console.log(error);
-        notify(error?.response?.data?.error, "error");
-      })
-      .finally(() => actions.setSubmitting(false));
-  };
-
-  const [googleUser, setGoogleUser] = useState([]);
+   const [googleUser, setGoogleUser] = useState([]);
 
   const signUpWithGoogle = useGoogleLogin({
     onSuccess: (codeResponse) => {

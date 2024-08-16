@@ -111,7 +111,7 @@ export default function Nav(){
           <MenuItem
             onClick={() => {
               handleClose();
-              navigate("/dashboard/profile");
+              navigate("/dashboard/settings");
             }}
           >
             <ListItemIcon>

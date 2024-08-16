@@ -128,7 +128,7 @@ const convertPdfToText = async (pdfPath) => {
 
     return result; // Return the result string directly
   } catch (error) {
-    console.error("Error during OCR processing:", error.message);
+    console.error("Error processing text:", error.message);
     return null;
   }
 };

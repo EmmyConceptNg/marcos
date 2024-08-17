@@ -97,12 +97,9 @@ const convertPdfToText = async (pdfPath) => {
 
     for (let i = 0; i < numPages; i++) {
       const singlePagePdf = await PDFDocument.create();
-      console.log(singlePagePdf)
       const [page] = await singlePagePdf.copyPages(pdfDoc, [i]);
       singlePagePdf.addPage(page);
       const singlePagePdfBytes = await singlePagePdf.save();
-
-      
 
       const form = new FormData();
       form.append("apikey", apiKey);
@@ -134,7 +131,7 @@ const convertPdfToText = async (pdfPath) => {
 
     return result; // Return the result string directly
   } catch (error) {
-    console.error("Error processing text:", error.message);
+    console.error("Error processing text:", error);
     return null;
   }
 };

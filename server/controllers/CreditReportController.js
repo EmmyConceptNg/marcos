@@ -90,6 +90,9 @@ const convertPdfToText = async (pdfPath) => {
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const numPages = pdfDoc.getPageCount();
 
+
+    console.log(pdfBuffer);
+
     let combinedText = "";
 
     for (let i = 0; i < numPages; i++) {
@@ -97,6 +100,8 @@ const convertPdfToText = async (pdfPath) => {
       const [page] = await singlePagePdf.copyPages(pdfDoc, [i]);
       singlePagePdf.addPage(page);
       const singlePagePdfBytes = await singlePagePdf.save();
+
+      console.log(singlePagePdfBytes);
 
       const form = new FormData();
       form.append("apikey", apiKey);
@@ -120,18 +125,15 @@ const convertPdfToText = async (pdfPath) => {
         continue;
       }
 
-      if (!ocrResult.ParsedResults || !ocrResult.ParsedResults[0] || !ocrResult.ParsedResults[0].ParsedText) {
-        console.error(`Unable to extract text from page ${i + 1}`);
-        continue;
-      }
-
       combinedText += ocrResult.ParsedResults[0].ParsedText.trim() + "\n\n";
     }
 
     const result = combinedText.trim().replace(/\n{3,}/g, "\n\n");
+    // console.log("Converted PDF Text:", result); // Log the result for debugging
+
     return result; // Return the result string directly
   } catch (error) {
-    console.error("Error processing PDF to text:", error.message);
+    console.error("Error processing text:", error.message);
     return null;
   }
 };
@@ -272,17 +274,14 @@ const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
 
 const parsePdfAndStore = async (pdfContent, userId, filePath) => {
   try {
-    console.log("Parsing PDF content...");
     const creditReportData = parsePdfText(pdfContent);
 
-    console.log("Updating CreditReport in the database...");
     const document = await CreditReport.findOneAndUpdate(
       { userId },
       { $set: { creditReportData }, $inc: { round: 1 }, filePath },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    console.log("Updating user with new CreditReport ID...");
     const user = await User.findOneAndUpdate(
       { _id: userId },
       { $set: { creditReport: document._id } },
@@ -294,7 +293,6 @@ const parsePdfAndStore = async (pdfContent, userId, filePath) => {
       .populate("letters")
       .select("-password");
 
-    console.log("Successfully updated user and CreditReport.");
     return { status: 200, data: { user, report: document } };
   } catch (error) {
     console.error("Error saving credit report data: ", error);

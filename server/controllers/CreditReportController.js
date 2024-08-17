@@ -120,135 +120,39 @@ const convertPdfToText = async (pdfPath) => {
         continue;
       }
 
+      if (
+        !ocrResult.ParsedResults ||
+        !ocrResult.ParsedResults[0] ||
+        !ocrResult.ParsedResults[0].ParsedText
+      ) {
+        console.error(`Unable to extract text from page ${i + 1}`);
+        continue;
+      }
+
       combinedText += ocrResult.ParsedResults[0].ParsedText.trim() + "\n\n";
     }
 
     const result = combinedText.trim().replace(/\n{3,}/g, "\n\n");
-    // console.log("Converted PDF Text:", result); // Log the result for debugging
-
     return result; // Return the result string directly
   } catch (error) {
-    console.error("Error processing text:", error.message);
+    console.error("Error processing PDF to text:", error.message);
     return null;
   }
 };
 
-const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
-  const $ = cheerio.load(htmlContent);
-  let creditReportData = {};
-
-  $(".rpt_content_wrapper").each((_, wrapper) => {
-    const header = $(wrapper).find(".rpt_fullReport_header");
-    let key = header.find("span").first().text().trim();
-    if (!key) key = header.text().trim();
-    if (!key) return;
-
-    key = toSnakeCase(key);
-
-    if (key === "account_history") {
-      let accounts = [];
-      $(wrapper)
-        .find(".sub_header.ng-binding.ng-scope")
-        .each((_, subHeader) => {
-          const accountKey = $(subHeader).text().trim();
-          const accountData = [];
-          const table = $(subHeader).next(
-            ".re-even-odd.rpt_content_table.rpt_content_header.rpt_table4column"
-          );
-          const rows = $(table).find("tr:not(:first-child)");
-          rows.each((_, row) => {
-            const label = $(row).find("td.label").text().trim();
-            const tucData = $(row).find("td").eq(1).text().trim();
-            const expData = $(row).find("td").eq(2).text().trim();
-            const eqfData = $(row).find("td").eq(3).text().trim();
-            accountData.push({
-              label,
-              data: { TUC: tucData, EXP: expData, EQF: eqfData },
-            });
-          });
-          if (accountData.length > 0) {
-            accounts.push({
-              accountName: toSnakeCase(accountKey),
-              accountDetails: accountData,
-            });
-          }
-        });
-      creditReportData[key] = accounts;
-    } else if (key === "public_information") {
-      let information = [];
-      $(wrapper)
-        .find(".sub_header")
-        .each((_, subHeader) => {
-          const accountKey = $(subHeader).text().trim();
-          const accountData = [];
-          const table = $(subHeader).next(
-            ".re-even-odd.rpt_content_table.rpt_content_header.rpt_table4column"
-          );
-          const rows = $(table).find("tr:not(:first-child)");
-          rows.each((_, row) => {
-            const label = $(row).find("td.label").text().trim();
-            const tucData = $(row).find("td").eq(1).text().trim();
-            const expData = $(row).find("td").eq(2).text().trim();
-            const eqfData = $(row).find("td").eq(3).text().trim();
-            accountData.push({
-              label,
-              data: { TUC: tucData, EXP: expData, EQF: eqfData },
-            });
-          });
-          if (accountData.length > 0) {
-            information.push({
-              infoType: accountKey,
-              infoDetails: accountData,
-            });
-          }
-        });
-      creditReportData[key] = information;
-    } else if (key === "inquiries") {
-      const sectionData = [];
-      $(wrapper)
-        .find(".rpt_content_table.rpt_content_header")
-        .each((_, table) => {
-          const rows = $(table).find("tr:not(:first-child)");
-          rows.each((_, row) => {
-            const creditor_name = $(row).find("td").eq(0).text().trim();
-            const type_of_business = $(row).find("td").eq(1).text().trim();
-            const date_of_enquiry = $(row).find("td").eq(2).text().trim();
-            const credit_bereau = $(row).find("td").eq(3).text().trim();
-            sectionData.push({
-              creditor_name,
-              data: { type_of_business, date_of_enquiry, credit_bereau },
-            });
-          });
-        });
-      creditReportData[key] = sectionData;
-    } else {
-      const sectionData = [];
-      $(wrapper)
-        .find(".rpt_content_table.rpt_content_header")
-        .each((_, table) => {
-          const rows = $(table).find("tr:not(:first-child)");
-          rows.each((_, row) => {
-            const label = $(row).find("td.label").text().trim();
-            const tucData = $(row).find("td").eq(1).text().trim();
-            const expData = $(row).find("td").eq(2).text().trim();
-            const eqfData = $(row).find("td").eq(3).text().trim();
-            sectionData.push({
-              label,
-              data: { TUC: tucData, EXP: expData, EQF: eqfData },
-            });
-          });
-        });
-      creditReportData[key] = sectionData;
-    }
-  });
-
+const parsePdfAndStore = async (pdfContent, userId, filePath) => {
   try {
+    console.log("Parsing PDF content...");
+    const creditReportData = parsePdfText(pdfContent);
+
+    console.log("Updating CreditReport in the database...");
     const document = await CreditReport.findOneAndUpdate(
       { userId },
       { $set: { creditReportData }, $inc: { round: 1 }, filePath },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    console.log("Updating user with new CreditReport ID...");
     const user = await User.findOneAndUpdate(
       { _id: userId },
       { $set: { creditReport: document._id } },
@@ -260,6 +164,7 @@ const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
       .populate("letters")
       .select("-password");
 
+    console.log("Successfully updated user and CreditReport.");
     return { status: 200, data: { user, report: document } };
   } catch (error) {
     console.error("Error saving credit report data: ", error);

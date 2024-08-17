@@ -91,17 +91,18 @@ const convertPdfToText = async (pdfPath) => {
     const numPages = pdfDoc.getPageCount();
 
 
-    console.log(pdfBuffer);
+    
 
     let combinedText = "";
 
     for (let i = 0; i < numPages; i++) {
       const singlePagePdf = await PDFDocument.create();
+      console.log(singlePagePdf)
       const [page] = await singlePagePdf.copyPages(pdfDoc, [i]);
       singlePagePdf.addPage(page);
       const singlePagePdfBytes = await singlePagePdf.save();
 
-      console.log(singlePagePdfBytes);
+      
 
       const form = new FormData();
       form.append("apikey", apiKey);

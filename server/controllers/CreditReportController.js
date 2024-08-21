@@ -280,7 +280,6 @@ const parsePdfAndStore = async (pdfContent, userId, filePath) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    
     const user = await User.findOneAndUpdate(
       { _id: userId },
       { $set: { creditReport: document._id } },
@@ -288,7 +287,6 @@ const parsePdfAndStore = async (pdfContent, userId, filePath) => {
     )
       .populate("subscriptionPlan")
       .populate("creditReport")
-      .populate("creditReports")
       .populate("documents")
       .populate("letters")
       .select("-password");

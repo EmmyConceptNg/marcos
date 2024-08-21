@@ -57,10 +57,10 @@ export default function DisputeCenters() {
       }, 2000);
       return false;
     }
-    if (user?.creditReport?.round > 4) {
-      notify("Error: Sorry you've used up your rounds", "error");
-      return false;
-    }
+    // if (user?.creditReport?.round > 4) {
+    //   notify("Error: Sorry you've used up your rounds", "error");
+    //   return false;
+    // }
     if (!isAnyCheckboxSelected()) {
       notify("Error: No items selected for the attack.", "error");
       return false;

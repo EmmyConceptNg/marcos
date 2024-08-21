@@ -122,7 +122,7 @@ export default function DocumentModal({ open, setOpen }) {
 
               <Box>
                 <input
-                  type="file"
+                  type="file" accept="image/*"
                   required
                   label="Document"
                   name="document"

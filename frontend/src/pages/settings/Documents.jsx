@@ -6,8 +6,6 @@ import {
   TextField,
   Typography,
   IconButton,
-  Checkbox,
-  FormControlLabel,
   Grid,
   Card,
   CardContent,
@@ -48,8 +46,18 @@ export default function Documents() {
   const handleDocumetModal = () => {
     setOpenModal(true);
   };
-  const handleReportModal = () => {
-    setOpenReport(true);
+
+  const handleReportModal = async () => {
+    if (user?.creditReport?.filePath) {
+      const fileExtension = user.creditReport.filePath.split(".").pop();
+      if (fileExtension === "pdf") {
+        setOpenReport(true);
+      } else if (fileExtension === "html") {
+        window.open(user.creditReport.filePath, "_blank");
+      }
+    } else {
+      notify("No credit report available", "info");
+    }
   };
 
   const rows = [
@@ -118,7 +126,11 @@ export default function Documents() {
     <Box mt={3} px={3} pb={3}>
       <ToastContainer />
       <DocumentModal open={openModal} setOpen={setOpenModal} />
-      <ReportModal open={openReport} setOpen={setOpenReport} />
+      <ReportModal
+        open={openReport}
+        setOpen={setOpenReport}
+        path={user?.creditReport?.filePath}
+      />
       <Stack direction="row" justifyContent="space-between">
         <Text fw="500" fs="24px">
           Identification

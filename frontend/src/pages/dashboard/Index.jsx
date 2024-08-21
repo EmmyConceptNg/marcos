@@ -258,10 +258,12 @@ const [report, setReport] = useState([])
 
      //Credit score
      const creditScoreArray =
-       user.creditReport.creditReportData["credit_score"];
+       user.creditReport.creditReportData["credit_score"] ||
+       user.creditReport.creditReportData["fico®_score"];
      if (creditScoreArray && creditScoreArray.length > 0) {
        const creditScoreObject = creditScoreArray.find(
-         (entry) => entry.label === "Credit Score:"
+         (entry) =>
+           entry.label === "Credit Score:" || entry.label === "FICO® Score 8:"
        );
        if (creditScoreObject) {
          const creditScoreData = creditScoreObject.data;

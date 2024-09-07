@@ -48,8 +48,9 @@ export default function DisputeCenters() {
   const navigate = useNavigate();
 
   const handleStartNewRound = async () => {
-    if (user.balance < 2) {
+    if (user?.balance == 0 || user?.balance < 2) {
       setOpenNoBalance(true);
+      return false;
     } else {
       try {
         const response = await axios.post("/api/auth/deduct-balance", {

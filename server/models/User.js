@@ -54,7 +54,7 @@ const schema = new mongoose.Schema(
     image: String,
     ssn: Number,
     ssnVerified: { type: Boolean, default: false },
-    balance: Number,
+    balance: {type:Number, default :0},
     documents: [
       {
         type: mongoose.Schema.Types.ObjectId,

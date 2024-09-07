@@ -4,7 +4,7 @@ export const userValidation = Yup.object({
   email: Yup.string().email("Invalid email address").required("Required"),
   password: Yup.string()
     .required("Password is required.")
-    .min(8, "Password must be at least 8 characters long.")
+    .min(8, "Password must be at least 8 characters long..")
     .matches(
       /[a-zA-Z]/,
       "Password must contain both upper and lower case letters."

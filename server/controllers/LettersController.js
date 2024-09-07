@@ -129,7 +129,7 @@ Personal Information:
     personalItems.forEach((item, index) => {
       content += `${index + 1}. ${
         item.details[bureauCode]
-      } - The personal information is incorrect - please remove this from my credit report immediately.\n`;
+      } - The personal information is incorrect - please remove this from my credit report immediately..\n`;
     });
   }
 

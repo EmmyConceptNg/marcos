@@ -5,7 +5,6 @@ import { sendMail } from "./SendMail.js";
 import Plan from "../models/Plan.js";
 import Documents from "../models/Documents.js";
 import axios from "axios";
-import { amountValidation } from "../../frontend/src/utils/validation.js";
 
 export const login = async (req, res) => {
   let signdetails = req.body;

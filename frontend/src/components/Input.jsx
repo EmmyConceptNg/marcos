@@ -1,21 +1,25 @@
-import { FormControl, IconButton, InputAdornment, OutlinedInput, styled } from "@mui/material";
+import {
+  FormControl,
+  IconButton,
+  InputAdornment,
+  OutlinedInput,
+  styled,
+} from "@mui/material";
 import PropTypes from "prop-types";
 import Text from "./Text";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useState } from "react";
 import { useField } from "formik";
 
-
-
 const InputField = styled(OutlinedInput)(({ theme, isPin, height }) => ({
   "& .MuiOutlinedInput-input": {
     height: height,
     padding: "0 14px",
     borderRadius: "8px",
-    border: isPin && "2px solid #FF9D43" ,
+    border: isPin && "2px solid #FF9D43",
     backgroundColor: "#fff",
     color: isPin ? "#FF9D43" : "#667085",
-    fontSize : isPin && '48px' 
+    fontSize: isPin && "48px",
   },
   "& .MuiOutlinedInput-notchedOutline": {
     top: 0,
@@ -28,22 +32,23 @@ const InputField = styled(OutlinedInput)(({ theme, isPin, height }) => ({
   },
 }));
 
-
-
-
-
 export default function Input({
-  required = true, isPin=false,
+  required = true,
+  isPin = false,
   id,
   label,
-  
-  placeholder, onInput, inputProp,
-  readOnly=false,
-  name, height="44px",
-  width, type="text",  details,
-  sx, defaultValue
+  placeholder,
+  onInput,
+  inputProp,
+  readOnly = false,
+  name,
+  height = "44px",
+  width,
+  type = "text",
+  details,
+  sx,
+  defaultValue,
 }) {
-
   const [showPassword, setShowPassword] = useState(false);
 
   const handleClickShowPassword = (field) => {
@@ -57,14 +62,14 @@ export default function Input({
     event.preventDefault();
   };
 
-   const [field, meta] = useField(name);
-    const isPasswordField = type === "password";
-    const inputType = isPasswordField && showPassword[name] ? "text" : type;
+  const [field, meta] = useField(name);
+  const isPasswordField = type === "password";
+  const inputType = isPasswordField && showPassword[name] ? "text" : type;
 
   return (
     <FormControl fullWidth sx={{ height }}>
       {label && (
-        <label htmlFor="password">
+        <label htmlFor={id}>
           <Text fw="500" fs="14px" ml={5} color="#344054">
             {label}
             <span style={{ color: "red", marginLeft: 2 }}>
@@ -101,7 +106,6 @@ export default function Input({
             </InputAdornment>
           ) : null
         }
-        // value={value}
         placeholder={placeholder}
       />
       {meta.touched && meta.error ? (

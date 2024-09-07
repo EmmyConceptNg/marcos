@@ -1,9 +1,10 @@
 import { Avatar, Box, Grid, Stack } from "@mui/material";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import EditIcon from "../../components/svgs/EditIcon";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import { Form, Formik } from "formik";
+import * as Yup from "yup";
 import { userDetailsCalidation } from "../../utils/validation";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "../../api/axios";
@@ -13,28 +14,29 @@ import { ToastContainer } from "react-toastify";
 import { useLocation, useNavigate } from "react-router-dom";
 
 export default function Profile() {
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.user.details);
+  const isSSNVerified = user?.ssnVerified ?? false;
+  const [verifying, setVerifying] = useState(false);
 
-  const dispatch = useDispatch()
-  const user = useSelector(state => state.user.details)
-
-    const location = useLocation();
-    const navigate = useNavigate();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const initialValues = {
-    fullName: user?.fullName ??'',
-    username: user?.username ?? '',
-    email : user?.email ?? '',
-    phone : user?.phone ?? '',
-    dob: user?.dob ?? '',
-    presentAddress: user?.presentAddress ?? '',
-    permAddress: user?.permAddress ??'',
-    city: user?.city ??'',
-    postalCode : user?.postalCode ?? '',
-    country: user?.country ?? '',
-    ssn: user?.ssn ?? '',
-  }
+    fullName: user?.fullName ?? "",
+    username: user?.username ?? "",
+    email: user?.email ?? "",
+    phone: user?.phone ?? "",
+    dob: user?.dob ? new Date(user.dob).toISOString().substring(0, 10) : "", // Format date for input[type="date"]
+    presentAddress: user?.presentAddress ?? "",
+    permAddress: user?.permAddress ?? "",
+    city: user?.city ?? "",
+    postalCode: user?.postalCode ?? "",
+    country: user?.country ?? "",
+    ssn: user?.ssn ?? "",
+  };
 
-const fileInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const handleImageClick = () => {
     fileInputRef.current.click();
@@ -61,47 +63,70 @@ const fileInputRef = useRef(null);
         .then((response) => {
           notify(response.data.message, "success");
           dispatch(setUser(response.data.user));
-
-          
         });
     } catch (error) {
       console.log("Error uploading image:", error);
-
       notify(error.response?.data.error, "error");
     }
   };
 
-const handleUpdate = (values, actions) => {
+  const handleSSNChange = async (event, setFieldValue) => {
+    const ssn = event.target.value;
+    const fullName = event.target.form.fullName.value;
+    const dob = event.target.form.dob.value;
 
-  
-  actions.setSubmitting(true);
+    if (ssn) {
+      setVerifying(true);
+      try {
+        const response = await axios.post("/api/auth/verify-ssn", {
+          ssn,
+          fullName,
+          dob,
+        });
+        const { fullName: verifiedFullName, dob: verifiedDOB } = response.data;
 
-  axios
-    .post(`/api/auth/update/${user?._id}`, values, {
-      headers: { "Content-Type": "application/json" },
-    })
-    .then((response) => {
-      console.log(response.data.user);
-      dispatch(setUser(response.data.user));
-      notify(response?.data?.message, "success");
+        setFieldValue("fullName", verifiedFullName);
+        setFieldValue(
+          "dob",
+          new Date(verifiedDOB).toISOString().substring(0, 10)
+        ); // Format date for input[type="date"]
 
-      const searchParams = new URLSearchParams(location.search);
-      const redirectUrl = searchParams.get('redirect');
-      
-      if (redirectUrl) {
-        setTimeout(() => {
-          navigate(redirectUrl);
-        }, 1000); // 1 seconds delay
+        notify("SSN verified successfully", "success");
+      } catch (error) {
+        notify(error.response?.data?.error || "Error verifying SSN", "error");
+      } finally {
+        setVerifying(false);
       }
-    })
-    .catch((error) => {
-      console.log(error);
-      notify(error?.response?.data?.error, "error");
-    })
-    .finally(() => actions.setSubmitting(false));
-};
+    }
+  };
 
+  const handleUpdate = (values, actions) => {
+    actions.setSubmitting(true);
 
+    axios
+      .post(`/api/auth/update/${user?._id}`, values, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then((response) => {
+        console.log(response.data.user);
+        dispatch(setUser(response.data.user));
+        notify(response?.data?.message, "success");
+
+        const searchParams = new URLSearchParams(location.search);
+        const redirectUrl = searchParams.get("redirect");
+
+        if (redirectUrl) {
+          setTimeout(() => {
+            navigate(redirectUrl);
+          }, 1000); // 1 second delay
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+        notify(error?.response?.data?.error, "error");
+      })
+      .finally(() => actions.setSubmitting(false));
+  };
 
   return (
     <Box mt={3}>
@@ -141,20 +166,43 @@ const handleUpdate = (values, actions) => {
           validationSchema={userDetailsCalidation}
           onSubmit={handleUpdate}
         >
-          {({ isSubmitting }) => (
+          {({ isSubmitting, setFieldValue }) => (
             <Form>
               <Grid container spacing={{ md: 5, xs: 0 }}>
+                {verifying && (
+                  <Grid item xs={12}>
+                    <Box sx={{ textAlign: "center", color: "green" }}>
+                      Verifying, please wait...
+                    </Box>
+                  </Grid>
+                )}
                 {[
                   {
                     label: "Your Name",
-                    placeholder: "Charlene Reed ",
+                    placeholder: "Charlene Reed",
                     required: false,
                     name: "fullName",
-                    readOnly: true,
+                    readOnly: isSSNVerified,
+                  },
+                  {
+                    label: "Date of Birth",
+                    placeholder: "1990-01-25",
+                    required: false,
+                    name: "dob",
+                    readOnly: isSSNVerified,
+                    type: "date",
+                  },
+                  {
+                    label: "Social Security Number",
+                    placeholder: "SSN",
+                    required: true,
+                    type: "number",
+                    name: "ssn",
+                    onInput: (e) => handleSSNChange(e, setFieldValue),
                   },
                   {
                     label: "User Name",
-                    placeholder: "Charlene Reed ",
+                    placeholder: "Charlene Reed",
                     required: false,
                     name: "username",
                   },
@@ -173,13 +221,6 @@ const handleUpdate = (values, actions) => {
                     required: false,
                     name: "phone",
                   },
-
-                  {
-                    label: "Date of Birth",
-                    placeholder: "25 January 1990",
-                    required: false,
-                    name: "dob",
-                  },
                   {
                     label: "Present Address",
                     placeholder: "San Jose, California, USA",
@@ -191,13 +232,6 @@ const handleUpdate = (values, actions) => {
                     placeholder: "San Jose, California, USA",
                     required: false,
                     name: "permAddress",
-                  },
-                  {
-                    label: "Social Security Number",
-                    placeholder: "SSN",
-                    required: true,
-                    type: "number",
-                    name: "ssn",
                   },
                   {
                     label: "City",
@@ -230,6 +264,7 @@ const handleUpdate = (values, actions) => {
                       aria-label={item.label}
                       type={item.type}
                       defaultValue={item?.defaultValue}
+                      onInput={item.onInput}
                     />
                   </Grid>
                 ))}

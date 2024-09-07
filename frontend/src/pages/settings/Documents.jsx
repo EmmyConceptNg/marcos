@@ -40,6 +40,7 @@ export default function Documents() {
   const dispatch = useDispatch();
   const [openModal, setOpenModal] = useState(false);
   const [openReport, setOpenReport] = useState(false);
+  const [pdfDataUrl, setPdfDataUrl] = useState("");
 
   const navigate = useNavigate();
 
@@ -47,10 +48,27 @@ export default function Documents() {
     setOpenModal(true);
   };
 
+  const fetchReport = async (filePath) => {
+    try {
+      const response = await axios.get(filePath, { responseType: "blob" });
+      const file = response.data;
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = () => {
+        const base64data = reader.result;
+        setPdfDataUrl(base64data);
+      };
+    } catch (error) {
+      notify("Error fetching PDF data", "error");
+      console.log(error);
+    }
+  };
+
   const handleReportModal = async () => {
     if (user?.creditReport?.filePath) {
       const fileExtension = user.creditReport.filePath.split(".").pop();
       if (fileExtension === "pdf") {
+        await fetchReport(user?.creditReport?.filePath);
         setOpenReport(true);
       } else if (fileExtension === "html") {
         window.open(user.creditReport.filePath, "_blank");
@@ -129,7 +147,7 @@ export default function Documents() {
       <ReportModal
         open={openReport}
         setOpen={setOpenReport}
-        path={user?.creditReport?.filePath}
+        dataUrl={pdfDataUrl}
       />
       <Stack direction="row" justifyContent="space-between">
         <Text fw="500" fs="24px">
@@ -245,7 +263,6 @@ export default function Documents() {
                       <Box sx={{ cursor: "pointer" }}>
                         <VisibilityIcon onClick={handleReportModal} />
                       </Box>
-
                       <Box
                         sx={{ cursor: "pointer" }}
                         onClick={handleUploadFromComputer}

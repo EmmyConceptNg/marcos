@@ -49,6 +49,7 @@ export const userDetailsCalidation = Yup.object({
   country: Yup.string().required("Required"),
   ssn: Yup.string().required("Required"),
 });
+
 export const preferencesValidation = Yup.object({
   currency: Yup.string().required("Required"),
   timeZone: Yup.string().required("Required"),

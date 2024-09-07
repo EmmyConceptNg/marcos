@@ -90,9 +90,6 @@ const convertPdfToText = async (pdfPath) => {
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const numPages = pdfDoc.getPageCount();
 
-
-    
-
     let combinedText = "";
 
     for (let i = 0; i < numPages; i++) {
@@ -106,6 +103,7 @@ const convertPdfToText = async (pdfPath) => {
       form.append("isTable", "true");
       form.append("scale", "true");
       form.append("language", "eng");
+      form.append("OCREngine", "2");
       form.append("file", Buffer.from(singlePagePdfBytes), "page.pdf");
 
       const { data: ocrResult } = await axios.post(
@@ -126,7 +124,12 @@ const convertPdfToText = async (pdfPath) => {
       combinedText += ocrResult.ParsedResults[0].ParsedText.trim() + "\n\n";
     }
 
-    const result = combinedText.trim().replace(/\n{3,}/g, "\n\n");
+    let result = combinedText.trim().replace(/\n{3,}/g, "\n\n");
+
+    // Replace incorrect parsing of "fransUnion" with "TransUnion"
+    result = result.replace(/fransUnion/g, "TransUnion");
+    result = result.replace(/Trans Union/g, "TransUnion");
+
     // console.log("Converted PDF Text:", result); // Log the result for debugging
 
     return result; // Return the result string directly

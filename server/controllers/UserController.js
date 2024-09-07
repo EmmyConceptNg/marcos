@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import { sendMail } from "./SendMail.js";
 import Plan from "../models/Plan.js";
 import Documents from "../models/Documents.js";
+import axios from "axios";
+import { amountValidation } from "../../frontend/src/utils/validation.js";
 
 export const login = async (req, res) => {
   let signdetails = req.body;
@@ -303,6 +305,74 @@ export const updateDocument = async (req, res) => {
   } catch (error) {
     console.error("Error updating document: ", error);
     res.status(400).json({ error: error.message });
+  }
+};
+
+
+export const verifySSN = async (req, res) => {
+  try {
+    const options = {
+      method: "POST",
+      url: "https://stationapi.veriff.com/v1/validate-registry/",
+      headers: {
+        "Content-Type": "application/json",
+        "X-AUTH-CLIENT": "5d48f5c8-8a11-43c7-9435-1d8e9854c5c7",
+      },
+      data: {
+        verification: {
+          callback: "https://veriff.com",
+          person: {
+            fullName: req.body.fullName,
+            idNumber: req.body.ssn,
+            dateOfBirth: req.body.dob,
+          },
+          vendorData: "11111111",
+        },
+      },
+    };
+
+    const response = await axios(options);
+    res.status(200).json(response.data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error verifying SSN" });
+  }
+};
+
+export const deductBalance = async (req, res) => {
+  try {
+    // Find the user by ID
+    const user = await User.findOne({ _id: req.body.userId })
+      .populate("subscriptionPlan")
+      .populate("creditReport")
+      .populate("letters")
+      .populate("documents")
+      .select("-password");;
+
+    // If the user is not found, return a 404 error
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Define the amount to deduct
+    const amount = 2;
+
+    // Check if the user has enough balance
+    if (user.balance < amount) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
+    // Deduct the amount from the user's balance
+    user.balance -= amount;
+
+    // Save the updated user data in the database
+    await user.save();
+
+    // Return the updated user data
+    res.status(200).json({ message: "Balance deducted", user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 

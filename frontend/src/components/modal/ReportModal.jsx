@@ -44,12 +44,12 @@ const uint8ArrayToBase64 = (uint8Array) => {
 export default function ReportModal({
   open,
   setOpen,
-  path,
+  dataUrl,
 }) {
   const handleClose = () => setOpen(false);
   const dispatch = useDispatch();
 
-  console.log(path);
+  console.log(dataUrl);
 
   return (
     <>
@@ -71,7 +71,7 @@ export default function ReportModal({
             <Text variant="h6">Credit Report</Text>
           </Box>
           <iframe
-            src={`data:application/pdf;base64,${path}`}
+            src={`data:application/pdf;base64,${dataUrl}`}
             title="PDF Letter"
             width="100%"
             height="500px"

@@ -6,7 +6,8 @@ export const parsePdfText = (pdfContent) => {
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
-  console.log("Parsed lines:", lines); // For initial visual inspection
+  // Log parsed lines for initial visual inspection
+  console.log("Parsed lines:", lines);
 
   const data = {
     customer_statement: [],
@@ -102,11 +103,21 @@ const parsePersonalInformation = (line, section) => {
     "Previous Address(es):",
     "Employers:",
   ];
+
   fields.forEach((field) => {
     if (line.includes(field)) {
+      const parts = line
+        .split(field)[1]
+        ?.trim()
+        .split("\t")
+        .map((part) => part.trim()) || ["", "", ""];
       section.push({
         label: field,
-        data: { TUC: line.split(field)[1]?.trim() || "", EXP: "-", EQF: "-" },
+        data: {
+          TUC: parts[0] ?? "-",
+          EXP: parts[1] ?? "-",
+          EQF: parts[2] ?? "-",
+        },
       });
     }
   });
@@ -116,7 +127,10 @@ const parseCreditScore = (line, creditReportData) => {
   console.log("credit score line:", line); // Log each line in this section
 
   const extractData = (line) => {
-    const parts = line.split("\t").map((part) => part.trim());
+    // Split at first ':' to separate label part from data part
+    const [labelPart, dataPart] = line.split(":");
+    // Split the data part by tab character '\t'
+    const parts = dataPart.split("\t").map((part) => part.trim());
     return {
       TUC: parts[1] ?? "-",
       EXP: parts[2] ?? "-",
@@ -230,7 +244,7 @@ const parseAccountHistory = (
         "",
         "",
       ];
-      currentAccount.accountDetails.push({
+      currentAccount?.accountDetails?.push({
         label: field,
         data: {
           TUC: dataArray[0]?.trim() || "-",
@@ -291,7 +305,50 @@ const parseSummary = (line, section) => {
 };
 
 const parsePublicInformation = (line, section) => {
-  // Assuming this is where public information parsing logic would go
+  const infoTypes = ["Bankruptcy", "Tax Lien", "Civil Judgment", "Legal Item"];
+
+  const fields = [
+    "Type:",
+    "Status:",
+    "Date Filed/Reported:",
+    "Reference#:",
+    "Closing Date:",
+    "Court:",
+    "Liability:",
+    "Exempt Amount:",
+    "Asset Amount:",
+    "Remarks:",
+    "Date Settled:",
+    "Date Paid:",
+  ];
+
+  if (infoTypes.some((infoType) => line == infoType )) {
+    section.push({
+      infoType: line,
+      infoDetails: [],
+    });
+    return;
+  }
+
+  const currentInfo = section[section.length - 1];
+
+  fields.forEach((field) => {
+    if (line.includes(field)) {
+      const dataArray = line.split(field)[1]?.trim().split("\t") || [
+        "",
+        "",
+        "",
+      ];
+      currentInfo?.infoDetails?.push({
+        label: field,
+        data: {
+          TUC: dataArray[0]?.trim() || "-",
+          EXP: dataArray[1]?.trim() || "-",
+          EQF: dataArray[2]?.trim() || "-",
+        },
+      });
+    }
+  });
 };
 
 const parseCreditorContacts = (line, section) => {

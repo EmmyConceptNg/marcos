@@ -33,6 +33,7 @@ export default function DisputeCenters() {
   const [accounts, setAccounts] = useState([]);
   const [checkboxStates, setCheckboxStates] = useState({});
   const [showLoader, setShowLoader] = useState(attacking);
+  const [openNoBalance, setOpenNoBalance] = useState(false);
 
   useEffect(() => {
     if (!attacking) {
@@ -45,6 +46,24 @@ export default function DisputeCenters() {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const handleStartNewRound = async () => {
+    if (user.balance < 2) {
+      setOpenNoBalance(true);
+    } else {
+      try {
+        const response = await axios.post("/api/auth/deduct-balance", {
+          userId: user._id,
+          amount: import.meta.env.VITE_ROUNDS_AMOUNT,
+        });
+        dispatch(setUser(response.data.user));
+        setType("disputing");
+      } catch (error) {
+        console.error("Failed to deduct balance:", error);
+        notify("Failed to start a new round. Please try again.", "error");
+      }
+    }
+  };
 
   const handleAttackNow = async () => {
     // Compile the selected disputes, accounts, and inquiries
@@ -115,8 +134,11 @@ export default function DisputeCenters() {
 
     try {
       setAttacking(true);
+      
       // Send a POST request to the server endpoint
       const response = await axios.post(endpoint, payload);
+
+      await handleStartNewRound();
 
       // Handle the response from the server
       console.log(response.data);
@@ -309,6 +331,8 @@ export default function DisputeCenters() {
                 user={user}
                 handleAttackNow={handleAttackNow}
                 attacking={attacking}
+                openNoBalance={openNoBalance}
+                setOpenNoBalance={setOpenNoBalance}
               />
             )}
           </Stack>
@@ -919,9 +943,15 @@ function Disputes({
   );
 }
 
-function Attacks({ setType, handleAttackNow, attacking }) {
+function Attacks({
+  setType,
+  handleAttackNow,
+  attacking,
+  openNoBalance,
+  setOpenNoBalance,
+}) {
   const user = useSelector((state) => state.user.details);
-  const [openNoBalance, setOpenNoBalance] = useState(false);
+  
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [letterContent, setLetterContent] = useState("");
   const [letterPath, setLetterPath] = useState("");

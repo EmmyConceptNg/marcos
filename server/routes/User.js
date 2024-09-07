@@ -12,6 +12,8 @@ import {
   updateImage,
   updatePassword,
   updateDocument,
+  verifySSN,
+  deductBalance,
 } from "../controllers/UserController.js";
 import { fileURLToPath } from "url";
 
@@ -43,6 +45,8 @@ const upload = multer({ storage: storage });
 router.post("/login", login);
 router.post("/login/google", loginGoogle);
 router.post("/register", register);
+router.post("/verify-ssn", verifySSN);
+router.post("/deduct-balance", deductBalance);
 
 router.get("/email/resend/:email", resendMail);
 router.post("/email/verify/:email", verifyMail);

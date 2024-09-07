@@ -47,24 +47,7 @@ export default function DisputeCenters() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleStartNewRound = async () => {
-    if (user?.balance == 0 || user?.balance < 2) {
-      setOpenNoBalance(true);
-      return false;
-    } else {
-      try {
-        const response = await axios.post("/api/auth/deduct-balance", {
-          userId: user._id,
-          amount: import.meta.env.VITE_ROUNDS_AMOUNT,
-        });
-        dispatch(setUser(response.data.user));
-        setType("disputing");
-      } catch (error) {
-        console.error("Failed to deduct balance:", error);
-        notify("Failed to start a new round. Please try again.", "error");
-      }
-    }
-  };
+  const handleStartNewRound = async () => {};
 
   const handleAttackNow = async () => {
     // Compile the selected disputes, accounts, and inquiries
@@ -86,7 +69,22 @@ export default function DisputeCenters() {
       return false;
     }
 
-    await handleStartNewRound();
+    if (user?.balance == 0 || user?.balance < 2) {
+      setOpenNoBalance(true);
+      return false;
+    } else {
+      try {
+        const response = await axios.post("/api/auth/deduct-balance", {
+          userId: user._id,
+          amount: import.meta.env.VITE_ROUNDS_AMOUNT,
+        });
+        dispatch(setUser(response.data.user));
+        setType("disputing");
+      } catch (error) {
+        console.error("Failed to deduct balance:", error);
+        notify("Failed to start a new round. Please try again.", "error");
+      }
+    }
 
     setAttacking(true);
     const selectedDisputes = disputes.filter(
@@ -137,11 +135,9 @@ export default function DisputeCenters() {
 
     try {
       setAttacking(true);
-      
+
       // Send a POST request to the server endpoint
       const response = await axios.post(endpoint, payload);
-
-      
 
       // Handle the response from the server
       console.log(response.data);
@@ -158,7 +154,7 @@ export default function DisputeCenters() {
 
       notify("Error: The attack could not be completed.", "error");
       setTimeout(() => {
-         setAttacking(false);
+        setAttacking(false);
       }, 3000);
     }
   };
@@ -190,7 +186,7 @@ export default function DisputeCenters() {
       </Helmet>
 
       <Fade in={true} timeout={1000}>
-        <Box sx={{  backgroundColor: "transparent" }}>
+        <Box sx={{ backgroundColor: "transparent" }}>
           <Stack spacing={3} sx={{ overflow: "hidden" }}>
             <Stack direction="row" sx={{ width: { sm: "314px", xs: "100%" } }}>
               <Box
@@ -305,7 +301,7 @@ export default function DisputeCenters() {
                 <Box
                   component="img"
                   src="/assets/icons/writing.gif"
-                  sx={{ width: "200px", height:'200px', borderRadius: "100%" }}
+                  sx={{ width: "200px", height: "200px", borderRadius: "100%" }}
                 />
                 <Text color="#fff" fs="18px" fw="500" sx={{ mt: 2 }}>
                   Disputing... Please Wait...
@@ -954,7 +950,7 @@ function Attacks({
   setOpenNoBalance,
 }) {
   const user = useSelector((state) => state.user.details);
-  
+
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [letterContent, setLetterContent] = useState("");
   const [letterPath, setLetterPath] = useState("");

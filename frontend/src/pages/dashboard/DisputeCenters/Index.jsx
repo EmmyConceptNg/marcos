@@ -85,6 +85,8 @@ export default function DisputeCenters() {
       return false;
     }
 
+    await handleStartNewRound();
+
     setAttacking(true);
     const selectedDisputes = disputes.filter(
       (_, index) =>
@@ -138,7 +140,7 @@ export default function DisputeCenters() {
       // Send a POST request to the server endpoint
       const response = await axios.post(endpoint, payload);
 
-      await handleStartNewRound();
+      
 
       // Handle the response from the server
       console.log(response.data);

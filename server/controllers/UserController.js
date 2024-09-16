@@ -323,7 +323,7 @@ export const verifySSN = async (req, res) => {
     const response = await axios.request(options);
     const user = await User.findOneAndUpdate(
       { _id: userId },
-      { ssnVerified: response.data.is_valid },
+      { ssnVerified: response.data.is_valid, ssn: ssn },
       { new: true }
     )
       .populate("subscriptionPlan")

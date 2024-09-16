@@ -5,18 +5,26 @@ import Input from "../../components/Input";
 import Button from "../../components/Button";
 import { Form, Formik } from "formik";
 import * as Yup from "yup";
-import { userDetailsCalidation } from "../../utils/validation";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "../../api/axios";
 import { setUser } from "../../redux/UserReducer";
 import { notify } from "../../utils/Index";
 import { ToastContainer } from "react-toastify";
 import { useLocation, useNavigate } from "react-router-dom";
+import CheckIcon from "@mui/icons-material/Check";
+import CancelIcon from "@mui/icons-material/Cancel";
+import { userDetailsValidation } from "../../utils/validation";
+import { CheckCircle } from "@mui/icons-material";
+
+
+
+// Utility function to remove hyphens from SSN
+const removeHyphens = (ssn) => ssn.replace(/-/g, "");
 
 export default function Profile() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.user.details);
-  const isSSNVerified = user?.ssnVerified ?? false;
+  const isSSNVerified = user?.ssnVerified ?? "pending";
   const [verifying, setVerifying] = useState(false);
 
   const location = useLocation();
@@ -27,7 +35,7 @@ export default function Profile() {
     username: user?.username ?? "",
     email: user?.email ?? "",
     phone: user?.phone ?? "",
-    dob: user?.dob ? new Date(user.dob).toISOString().substring(0, 10) : "", // Format date for input[type="date"]
+    dob: user?.dob ? new Date(user.dob).toISOString().substring(0, 10) : "",
     presentAddress: user?.presentAddress ?? "",
     permAddress: user?.permAddress ?? "",
     city: user?.city ?? "",
@@ -71,28 +79,36 @@ export default function Profile() {
   };
 
   const handleSSNChange = async (event, setFieldValue) => {
-    const ssn = event.target.value;
+    const ssnRaw = event.target.value;
+    const ssn = removeHyphens(ssnRaw);
     const fullName = event.target.form.fullName.value;
     const dob = event.target.form.dob.value;
 
-    if (ssn) {
+    if (ssn.length === 9) {
       setVerifying(true);
       try {
         const response = await axios.post("/api/auth/verify-ssn", {
+          userId: user?._id,
           ssn,
           fullName,
           dob,
         });
-        const { fullName: verifiedFullName, dob: verifiedDOB } = response.data;
 
-        setFieldValue("fullName", verifiedFullName);
+        dispatch(setUser(response.data.user));
+
+        setFieldValue("fullName", user?.fullName);
         setFieldValue(
           "dob",
-          new Date(verifiedDOB).toISOString().substring(0, 10)
-        ); // Format date for input[type="date"]
+          new Date(user?.dob).toISOString().substring(0, 10)
+        );
 
-        notify("SSN verified successfully", "success");
+        if (response.data.is_valid === "TRUE") {
+          notify(response.data.message, "success");
+        } else {
+          notify(response.data.message, "warn");
+        }
       } catch (error) {
+        console.log(error);
         notify(error.response?.data?.error || "Error verifying SSN", "error");
       } finally {
         setVerifying(false);
@@ -118,7 +134,7 @@ export default function Profile() {
         if (redirectUrl) {
           setTimeout(() => {
             navigate(redirectUrl);
-          }, 1000); // 1 second delay
+          }, 1000);
         }
       })
       .catch((error) => {
@@ -159,11 +175,9 @@ export default function Profile() {
           </Box>
         </Box>
 
-        {/* Edit Form */}
-
         <Formik
           initialValues={initialValues}
-          validationSchema={userDetailsCalidation}
+          validationSchema={userDetailsValidation(isSSNVerified)}
           onSubmit={handleUpdate}
         >
           {({ isSubmitting, setFieldValue }) => (
@@ -182,21 +196,21 @@ export default function Profile() {
                     placeholder: "Charlene Reed",
                     required: false,
                     name: "fullName",
-                    readOnly: isSSNVerified,
+                    readOnly: isSSNVerified === "TRUE",
                   },
                   {
                     label: "Date of Birth",
                     placeholder: "1990-01-25",
                     required: false,
                     name: "dob",
-                    readOnly: isSSNVerified,
+                    readOnly: isSSNVerified === "TRUE",
                     type: "date",
                   },
                   {
                     label: "Social Security Number",
                     placeholder: "SSN",
                     required: true,
-                    type: "number",
+                    type: "text",
                     name: "ssn",
                     onInput: (e) => handleSSNChange(e, setFieldValue),
                   },
@@ -254,18 +268,29 @@ export default function Profile() {
                   },
                 ].map((item, index) => (
                   <Grid item md={6} xs={12} key={index} mb={{ xs: 5, md: 0 }}>
-                    <Input
-                      name={item.name}
-                      readOnly={item?.readOnly}
-                      height="45px"
-                      label={item.label}
-                      required={item.required}
-                      placeholder={item.placeholder}
-                      aria-label={item.label}
-                      type={item.type}
-                      defaultValue={item?.defaultValue}
-                      onInput={item.onInput}
-                    />
+                    <Box display="flex">
+                      <Input
+                        name={item.name}
+                        readOnly={item?.readOnly}
+                        height="45px"
+                        label={item.label}
+                        required={item.required}
+                        placeholder={item.placeholder}
+                        aria-label={item.label}
+                        type={item.type}
+                        defaultValue={item?.defaultValue}
+                        onInput={item.onInput}
+                      />
+                      {item.name === "ssn" && !verifying && (
+                        <Box ml={1} position="relative" top="35px">
+                          {isSSNVerified === "TRUE" ? (
+                            <CheckCircle sx={{ color: "green" }} />
+                          ) : isSSNVerified === "FALSE" ? (
+                            <CancelIcon sx={{ color: "red" }} />
+                          ) : null}
+                        </Box>
+                      )}
+                    </Box>
                   </Grid>
                 ))}
               </Grid>

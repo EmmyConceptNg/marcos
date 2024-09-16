@@ -23,6 +23,8 @@ export const parsePdfText = (pdfContent) => {
   let currentSection = null;
   let previousLine = null;
   let lineBeforePrevious = null;
+  let isNextLineVantage = false;
+  let vantageCounter = 1;
 
   lines.forEach((line, index) => {
     // Log the current processing line
@@ -31,24 +33,36 @@ export const parsePdfText = (pdfContent) => {
     // Section switching logic using contains check
     if (line.includes("Personal Information")) {
       currentSection = "personal_information";
+      isNextLineVantage = false;
       console.log("Switched to section: personal_information");
-    } else if (line.includes("Credit Score") && !line.includes(":")) {
+    } else if (
+      line.includes("FICO® Score") ||
+      line.includes("Your 3B Report & Vantage Scores® 3.0")
+    ) {
       currentSection = "credit_score";
       console.log("Switched to section: credit_score");
+      if (line.includes("Vantage Scores® 3.0")) {
+        isNextLineVantage = true;
+      }
     } else if (line.includes("Account History")) {
       currentSection = "account_history";
+      isNextLineVantage = false;
       console.log("Switched to section: account_history");
     } else if (line.includes("Inquiries")) {
       currentSection = "inquiries";
+      isNextLineVantage = false;
       console.log("Switched to section: inquiries");
     } else if (line.includes("Summary")) {
       currentSection = "summary";
+      isNextLineVantage = false;
       console.log("Switched to section: summary");
     } else if (line.includes("Public Information")) {
       currentSection = "public_information";
+      isNextLineVantage = false;
       console.log("Switched to section: public_information");
     } else if (line.includes("Creditor Contacts")) {
       currentSection = "creditor_contacts";
+      isNextLineVantage = false;
       console.log("Switched to section: creditor_contacts");
     } else if (currentSection) {
       console.log(`In section: ${currentSection}`);
@@ -59,7 +73,15 @@ export const parsePdfText = (pdfContent) => {
           parsePersonalInformation(line, data[currentSection]);
           break;
         case "credit_score":
-          parseCreditScore(line, data);
+          parseCreditScore(line, data, isNextLineVantage, vantageCounter);
+          if (
+            isNextLineVantage &&
+            line.trim().length > 0 &&
+            !line.includes(":")
+          ) {
+            // Only increase counter if dealing with actual Vantage score line
+            vantageCounter++;
+          }
           break;
         case "account_history":
           parseAccountHistory(
@@ -123,7 +145,12 @@ const parsePersonalInformation = (line, section) => {
   });
 };
 
-const parseCreditScore = (line, creditReportData) => {
+const parseCreditScore = (
+  line,
+  creditReportData,
+  isVantage,
+  vantageCounter
+) => {
   console.log("credit score line:", line); // Log each line in this section
 
   const extractData = (line) => {
@@ -132,38 +159,42 @@ const parseCreditScore = (line, creditReportData) => {
     // Split the data part by tab character '\t'
     const parts = dataPart.split("\t").map((part) => part.trim());
     return {
-      TUC: parts[1] ?? "-",
-      EXP: parts[2] ?? "-",
-      EQF: parts[3] ?? "-",
+      TUC: parts[0] ?? "-",
+      EXP: parts[1] ?? "-",
+      EQF: parts[2] ?? "-",
     };
   };
 
-  if (line.startsWith("Credit Score:")) {
+  if (isVantage && line.trim().length > 0 && !line.includes(":")) {
+    // Handle Vantage score line
+    const parts = line.split("\t").map((part) => part.trim());
+    creditReportData.credit_score.push({
+      label: `Vantage${vantageCounter}`,
+      data: {
+        TUC: parts[0] ?? "-",
+        EXP: parts[1] ?? "-",
+        EQF: parts[2] ?? "-",
+      },
+    });
+  } else if (line.startsWith("Credit Score:")) {
     creditReportData.credit_score.push({
       label: "Credit Score:",
-      data: {
-        TUC: extractData(line).TUC,
-        EXP: extractData(line).EXP,
-        EQF: extractData(line).EQF,
-      },
+      data: extractData(line),
     });
   } else if (line.startsWith("Lender Rank:")) {
     creditReportData.credit_score.push({
       label: "Lender Rank:",
-      data: {
-        TUC: extractData(line).TUC,
-        EXP: extractData(line).EXP,
-        EQF: extractData(line).EQF,
-      },
+      data: extractData(line),
+    });
+  } else if (line.startsWith("FICO® Score 8:")) {
+    creditReportData.credit_score.push({
+      label: "FICO® Score 8:",
+      data: extractData(line),
     });
   } else if (line.startsWith("Score Scale:")) {
     creditReportData.credit_score.push({
       label: "Score Scale:",
-      data: {
-        TUC: extractData(line).TUC,
-        EXP: extractData(line).EXP,
-        EQF: extractData(line).EQF,
-      },
+      data: extractData(line),
     });
   } else if (line.startsWith("Risk Factors")) {
     creditReportData.credit_score.push({
@@ -187,7 +218,7 @@ const parseCreditScore = (line, creditReportData) => {
   ) {
     const parts = line.split("\t").map((part) => part.trim());
     creditReportData.credit_score.push({
-      label: "",
+      label: "", // This should be blank if there's no specific label
       data: {
         TUC: parts[0] ?? "-",
         EXP: parts[1] ?? "-",
@@ -322,7 +353,7 @@ const parsePublicInformation = (line, section) => {
     "Date Paid:",
   ];
 
-  if (infoTypes.some((infoType) => line == infoType )) {
+  if (infoTypes.some((infoType) => line == infoType)) {
     section.push({
       infoType: line,
       infoDetails: [],

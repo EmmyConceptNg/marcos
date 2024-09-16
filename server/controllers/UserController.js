@@ -14,7 +14,6 @@ export const login = async (req, res) => {
     .populate("creditReport")
     .populate("documents")
     .populate("letters");
-    
 
   if (!user) {
     return res.status(404).json({ error: "Email not found" });
@@ -262,7 +261,6 @@ export const updateImage = async (req, res) => {
   }
 };
 
-
 export const updateDocument = async (req, res) => {
   try {
     if (!req.file?.filename) {
@@ -307,31 +305,40 @@ export const updateDocument = async (req, res) => {
   }
 };
 
-
 export const verifySSN = async (req, res) => {
   try {
+    const ssn = req.body.ssn;
+    const userId = req.body.userId;
+
     const options = {
-      method: "POST",
-      url: "https://stationapi.veriff.com/v1/validate-registry/",
+      method: "GET",
+      url: `https://free-social-security-number-validator.p.rapidapi.com/?usa_social_security_number=${ssn}`,
       headers: {
-        "Content-Type": "application/json",
-        "X-AUTH-CLIENT": "5d48f5c8-8a11-43c7-9435-1d8e9854c5c7",
-      },
-      data: {
-        verification: {
-          callback: "https://veriff.com",
-          person: {
-            fullName: req.body.fullName,
-            idNumber: req.body.ssn,
-            dateOfBirth: req.body.dob,
-          },
-          vendorData: "11111111",
-        },
+        "x-rapidapi-key": "aee1c8fa29mshdc412456409135ep1fd536jsnb33a1880ca1d",
+        "x-rapidapi-host":
+          "free-social-security-number-validator.p.rapidapi.com",
       },
     };
 
-    const response = await axios(options);
-    res.status(200).json(response.data);
+    const response = await axios.request(options);
+    const user = await User.findOneAndUpdate(
+      { _id: userId },
+      { ssnVerified: response.data.is_valid },
+      { new: true }
+    )
+      .populate("subscriptionPlan")
+      .populate("creditReport")
+      .populate("letters")
+      .populate("documents")
+      .select("-password");
+console.log(response.data.is_valid);
+    if (response.data.is_valid == "FALSE") {
+      const message = "Incorrect SSN, please verify";
+      res.status(200).json({ message, user, is_valid: response.data.is_valid });
+    } else {
+      const message = "SSN Verified";
+      res.status(200).json({ message, user, is_valid: response.data.is_valid });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error verifying SSN" });
@@ -346,7 +353,7 @@ export const deductBalance = async (req, res) => {
       .populate("creditReport")
       .populate("letters")
       .populate("documents")
-      .select("-password");;
+      .select("-password");
 
     // If the user is not found, return a 404 error
     if (!user) {
@@ -374,8 +381,6 @@ export const deductBalance = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
 
 const html = (user) => {
   return ` <center>

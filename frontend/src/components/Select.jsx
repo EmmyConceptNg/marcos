@@ -3,8 +3,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  styled,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import PropTypes from "prop-types";
 import Text from "./Text";
 import { useField } from "formik";

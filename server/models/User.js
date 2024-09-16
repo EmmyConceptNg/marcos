@@ -53,7 +53,7 @@ const schema = new mongoose.Schema(
     plaidItemId: String,
     image: String,
     ssn: Number,
-    ssnVerified: { type: Boolean, default: false },
+    ssnVerified: { type: String },
     balance: {type:Number, default :0},
     documents: [
       {

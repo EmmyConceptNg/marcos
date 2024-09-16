@@ -3,8 +3,8 @@ import {
   IconButton,
   InputAdornment,
   OutlinedInput,
-  styled,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import PropTypes from "prop-types";
 import Text from "./Text";
 import { Visibility, VisibilityOff } from "@mui/icons-material";

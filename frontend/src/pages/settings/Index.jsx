@@ -1,4 +1,5 @@
-import { Box, Tab, Tabs, styled } from "@mui/material";
+import { Box, Tab, Tabs } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import { useEffect, useState } from "react";
 import Text from "../../components/Text";
 import Profile from "./Profile";

@@ -36,19 +36,24 @@ export const pinValidation = Yup.object({
   pin4: Yup.string().required("Required").length(1, "Invalid"),
 });
 
-export const userDetailsCalidation = Yup.object({
-  fullName: Yup.string().required("Required"),
-  username: Yup.string().required("Required"),
-  email: Yup.string().email("Invalid email address").required("Required"),
-  dob: Yup.string().required("Required"),
-  phone: Yup.string().required("Required"),
-  presentAddress: Yup.string().required("Required"),
-  permAddress: Yup.string().required("Required"),
-  city: Yup.string().required("Required"),
-  postalCode: Yup.string().required("Required"),
-  country: Yup.string().required("Required"),
-  ssn: Yup.string().required("Required"),
-});
+export const userDetailsValidation = (isSSNVerified) =>
+  Yup.object({
+    fullName: Yup.string().required("Required"),
+    username: Yup.string().required("Required"),
+    email: Yup.string().email("Invalid email address").required("Required"),
+    dob: Yup.string().required("Required"),
+    phone: Yup.string().required("Required"),
+    presentAddress: Yup.string().required("Required"),
+    permAddress: Yup.string().required("Required"),
+    city: Yup.string().required("Required"),
+    postalCode: Yup.string().required("Required"),
+    country: Yup.string().required("Required"),
+    ssn: Yup.string()
+      .required("Required")
+      .test("is-ssn-verified", "Invalid SSN", function (value) {
+        return isSSNVerified !== "FALSE";
+      }),
+  });
 
 export const preferencesValidation = Yup.object({
   currency: Yup.string().required("Required"),

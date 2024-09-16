@@ -186,7 +186,7 @@ const parseCreditScore = (
       label: "Lender Rank:",
       data: extractData(line),
     });
-  } else if (line.startsWith("FICO® Score 8:") || line.startsWith("FICO® Score 8: [+]" )) {
+  } else if (line.startsWith("FICO® Score 8:")) {
     creditReportData.credit_score.push({
       label: "FICO® Score 8:",
       data: extractData(line),

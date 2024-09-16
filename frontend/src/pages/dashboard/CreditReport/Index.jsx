@@ -44,7 +44,7 @@ export default function CreditReport() {
       //Credit score    
       const creditScoreArray =
         user.creditReport.creditReportData["credit_score"] ||
-        user.creditReport.creditReportData["fico®_score"];
+        user.creditReport.creditReportData["fico®_score"] || user.creditReport.creditReportData["Vantage2"];
       if (creditScoreArray && creditScoreArray.length > 0) {
         const creditScoreObject = creditScoreArray.find(
           (entry) =>

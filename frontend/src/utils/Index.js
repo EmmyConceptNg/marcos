@@ -1,44 +1,22 @@
 import { Zoom, toast } from "react-toastify";
 
-
 export const notify = (message, type) => {
+  const toastOptions = {
+    position: "top-right",
+    autoClose: 1000,
+    transition: Zoom,
+  };
+
   const notifyObject = {
-    info: () =>
-      toast.info(message, {
-        position: "top-right",
-        autoClose: 1000,
-        toastId: "01",
-        transition: Zoom,
-      }),
+    info: () => toast.info(message, { ...toastOptions }),
+    success: () => toast.success(message, { ...toastOptions }),
+    warn: () => toast.warn(message, { ...toastOptions }),
+    error: () => toast.error(message, { ...toastOptions }),
+  };
 
-    success: () =>
-      toast.success(message, {
-        position: "top-right",
-        autoClose: 1000,
-        toastId: "02",
-        transition: Zoom,
-      }),
-
-    warn: () =>
-      toast.warn(message, {
-        position: "top-right",
-        autoClose: 1000,
-        toastId: "03",
-        transition: Zoom,
-      }),
-
-    error: () =>
-      toast.error(message, {
-        position: "top-right",
-        autoClose: 1000,
-        toastId: "04",
-        transition: Zoom,
-      }),
-  }[type]();
+  if (notifyObject[type]) {
+    notifyObject[type](); // Call the specific notification
+  } else {
+    console.error("Invalid notification type provided.");
+  }
 };
-
-
-
-
-
-

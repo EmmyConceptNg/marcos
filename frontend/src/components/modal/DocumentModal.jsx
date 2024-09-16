@@ -122,12 +122,19 @@ export default function DocumentModal({ open, setOpen }) {
 
               <Box>
                 <input
-                  type="file" accept="image/*"
+                  type="file"
+                  accept="image/*"
                   required
                   label="Document"
                   name="document"
                   onChange={(event) => {
-                    setFieldValue("document", event.currentTarget.files[0]);
+                    const file = event.currentTarget.files[0];
+                    if (file && file.size <= 1 * 1024 * 1024) {
+                      setFieldValue("document", file);
+                    } else {
+                      notify("File size must be less than 1MB", "error");
+                      event.target.value = null; // Reset the file input
+                    }
                   }}
                 />
               </Box>

@@ -49,6 +49,7 @@ export default function DisputeCenters() {
 
   const handleStartNewRound = async () => {
     if (user?.balance == 0 || user?.balance < 2) {
+      console.log('me')
       setOpenNoBalance(true);
       return false;
     } else {
@@ -59,9 +60,11 @@ export default function DisputeCenters() {
         });
         dispatch(setUser(response.data.user));
         setType("disputing");
+        return true;
       } catch (error) {
         console.error("Failed to deduct balance:", error);
         notify("Failed to start a new round. Please try again.", "error");
+        return false;
       }
     }
   };
@@ -75,18 +78,19 @@ export default function DisputeCenters() {
       setTimeout(() => {
         navigate("/dashboard/settings");
       }, 2000);
-      return false;
+      return;
     }
     // if (user?.creditReport?.round > 4) {
     //   notify("Error: Sorry you've used up your rounds", "error");
-    //   return false;
+    //   return;
     // }
     if (!isAnyCheckboxSelected()) {
       notify("Error: No items selected for the attack.", "error");
-      return false;
+      return;
     }
 
-    await handleStartNewRound();
+    const roundStarted = await handleStartNewRound();
+    if (!roundStarted) return; // Stop execution if round didn't start
 
     setAttacking(true);
     const selectedDisputes = disputes.filter(
@@ -137,11 +141,9 @@ export default function DisputeCenters() {
 
     try {
       setAttacking(true);
-      
+
       // Send a POST request to the server endpoint
       const response = await axios.post(endpoint, payload);
-
-      
 
       // Handle the response from the server
       console.log(response.data);
@@ -158,7 +160,7 @@ export default function DisputeCenters() {
 
       notify("Error: The attack could not be completed.", "error");
       setTimeout(() => {
-         setAttacking(false);
+        setAttacking(false);
       }, 3000);
     }
   };
@@ -184,13 +186,14 @@ export default function DisputeCenters() {
 
   return (
     <>
+      <NoBalanceModal open={openNoBalance} setOpen={setOpenNoBalance} />
       <ToastContainer />
       <Helmet>
         <title>Dispute Center</title>
       </Helmet>
 
       <Fade in={true} timeout={1000}>
-        <Box sx={{  backgroundColor: "transparent" }}>
+        <Box sx={{ backgroundColor: "transparent" }}>
           <Stack spacing={3} sx={{ overflow: "hidden" }}>
             <Stack direction="row" sx={{ width: { sm: "314px", xs: "100%" } }}>
               <Box
@@ -304,8 +307,8 @@ export default function DisputeCenters() {
               >
                 <Box
                   component="img"
-                  src="/assets/icons/writing.gif"
-                  sx={{ width: "200px", height:'200px', borderRadius: "100%" }}
+                  src="/assets/icons/loader.gif"
+                  sx={{ width: "70px", height: "70px", borderRadius: "100%" }}
                 />
                 <Text color="#fff" fs="18px" fw="500" sx={{ mt: 2 }}>
                   Disputing... Please Wait...
@@ -954,7 +957,7 @@ function Attacks({
   setOpenNoBalance,
 }) {
   const user = useSelector((state) => state.user.details);
-  
+
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [letterContent, setLetterContent] = useState("");
   const [letterPath, setLetterPath] = useState("");

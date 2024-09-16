@@ -36,7 +36,8 @@ export const parsePdfText = (pdfContent) => {
       isNextLineVantage = false;
       console.log("Switched to section: personal_information");
     } else if (
-      line.includes("FICO® Score") ||
+      line.includes("FICO® Score	+ Back to Top") ||
+      line.includes("Credit Score	Back to Top") ||
       line.includes("Your 3B Report & Vantage Scores® 3.0")
     ) {
       currentSection = "credit_score";
@@ -153,17 +154,29 @@ const parseCreditScore = (
 ) => {
   console.log("credit score line:", line); // Log each line in this section
 
-  const extractData = (line) => {
-    // Split at first ':' to separate label part from data part
-    const [labelPart, dataPart] = line.split(":");
-    // Split the data part by tab character '\t'
-    const parts = dataPart.split("\t").map((part) => part.trim());
-    return {
-      TUC: parts[0] ?? "-",
-      EXP: parts[1] ?? "-",
-      EQF: parts[2] ?? "-",
-    };
+const extractData = (line) => {
+  // Split at first ':' to separate label part from data part
+  const [labelPart, dataPart] = line.split(":");
+  // Split the data part by tab character '\t'
+  const parts = dataPart.split("\t").map((part) => part.trim());
+
+  // Initialize an iterator for parts
+  const iterator = parts[Symbol.iterator]();
+
+  // Get the first non-empty part or fallback to "-"
+  const getNextPart = () => {
+    for (let part of iterator) {
+      if (part) return part;
+    }
+    return "-";
   };
+
+  return {
+    TUC: getNextPart(),
+    EXP: getNextPart(),
+    EQF: getNextPart(),
+  };
+};
 
   if (isVantage && line.trim().length > 0 && !line.includes(":")) {
     // Handle Vantage score line

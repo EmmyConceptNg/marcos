@@ -64,27 +64,21 @@ export default function Documents() {
     }
   };
 
-  const handleReportModal = async () => {
-    if (user?.creditReport?.filePath) {
-      const fileExtension = user.creditReport.filePath.split(".").pop();
+  const handleReportModal = async (row) => {
+    if (row?.filePath) {
+      const fileExtension = row?.filePath.split(".").pop();
       if (fileExtension === "pdf") {
-        await fetchReport(user?.creditReport?.filePath);
+        await fetchReport(row?.filePath); 
         setOpenReport(true);
       } else if (fileExtension === "html") {
-        window.open(user.creditReport.filePath, "_blank");
+        window.open(row?.filePath, "_blank");
       }
     } else {
       notify("No credit report available", "info");
     }
   };
 
-  const rows = [
-    {
-      reportDate: "10.04.2024",
-      reportId: "#96816",
-      confirmationNo: "1000025",
-    },
-  ];
+
 
   const handleUploadFromComputer = () => {
     if (!hasProofOfAddress(user) || !hasID(user)) {
@@ -203,7 +197,7 @@ export default function Documents() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row, index) => (
+              {user?.creditReport?.map((row, index) => (
                 <TableRow
                   key={index}
                   sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
@@ -217,7 +211,18 @@ export default function Documents() {
                     component="th"
                     scope="row"
                   >
-                    {moment(user?.creditReport?.createdAt).format("YYYY-MM-DD")}
+                    {moment(row?.createdAt).format("YYYY-MM-DD")}
+                  </TableCell>
+
+                  <TableCell
+                    sx={{
+                      fontSize: "15px",
+                      color: "#475467",
+                      fontWeight: "400",
+                    }}
+                    align="left"
+                  >
+                    {row?._id?.slice(0, 6)}
                   </TableCell>
                   <TableCell
                     sx={{
@@ -227,17 +232,7 @@ export default function Documents() {
                     }}
                     align="left"
                   >
-                    {user?.creditReport?._id?.slice(0, 6)}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "15px",
-                      color: "#475467",
-                      fontWeight: "400",
-                    }}
-                    align="left"
-                  >
-                    {moment(user?.creditReport?.createdAt).format("YYYY-MM-DD")}
+                    {moment(row?.createdAt).format("YYYY-MM-DD")}
                   </TableCell>
                   <TableCell
                     sx={{
@@ -261,14 +256,16 @@ export default function Documents() {
                   >
                     <Stack direction="row" spacing={2}>
                       <Box sx={{ cursor: "pointer" }}>
-                        <VisibilityIcon onClick={handleReportModal} />
+                        <VisibilityIcon
+                          onClick={() => handleReportModal(row)}
+                        />
                       </Box>
-                      <Box
+                      {/* <Box
                         sx={{ cursor: "pointer" }}
                         onClick={handleUploadFromComputer}
                       >
                         <EditDocIcon />
-                      </Box>
+                      </Box> */}
                     </Stack>
                   </TableCell>
                 </TableRow>

@@ -34,10 +34,10 @@ const schema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Plan",
     },
-    creditReport: {
+    creditReport: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "CreditReport",
-    },
+    }],
     letters: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Letters",

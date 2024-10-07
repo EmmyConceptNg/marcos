@@ -34,6 +34,7 @@ export const uploadRecord = async (req, res) => {
   const filePath = req.file.path;
   const { userId } = req.params;
 
+  // Check if the file exists
   if (!fs.existsSync(filePath)) {
     console.error(`File not found at path: ${filePath}`);
     return res.status(400).json({ message: "File not found" });
@@ -41,29 +42,27 @@ export const uploadRecord = async (req, res) => {
 
   let result;
 
-  if (
-    req.file.mimetype === "text/html" ||
-    req.file.originalname.endsWith(".html")
-  ) {
-    fs.readFile(filePath, "utf8", async (err, data) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).send("Error reading HTML file");
-      }
+  try {
+    if (
+      req.file.mimetype === "text/html" ||
+      req.file.originalname.endsWith(".html")
+    ) {
+      // Read HTML file asynchronously using promises
+      const data = await fs.promises.readFile(filePath, "utf8");
       result = await parseHtmlAndStore(data, userId, filePath);
       if (result.status !== 200) {
         return res.status(result.status).json({ message: result.message });
       }
       cleanUpTempFile(filePath);
-      res.status(200).json(result.data);
-    });
-  } else if (req.file.mimetype === "application/pdf") {
-    try {
+      return res.status(200).json(result.data);
+    } else if (req.file.mimetype === "application/pdf") {
+      // Convert PDF to text and process
       const textContent = await convertPdfToText(filePath);
       if (textContent) {
         result = await parsePdfAndStore(textContent, userId, filePath);
       } else {
         console.error("Invalid text content extracted from PDF");
+        cleanUpTempFile(filePath);
         return res
           .status(500)
           .send("Error converting PDF file: Invalid content");
@@ -72,13 +71,14 @@ export const uploadRecord = async (req, res) => {
       if (result.status !== 200) {
         return res.status(result.status).json({ message: result.message });
       }
-      res.status(200).json(result.data);
-    } catch (error) {
-      console.error("Error converting PDF file", error);
-      return res.status(500).send("Error converting PDF file");
+      return res.status(200).json(result.data);
+    } else {
+      return res.status(400).json({ message: "Unsupported file type" });
     }
-  } else {
-    return res.status(400).json({ message: "Unsupported file type" });
+  } catch (error) {
+    console.error("Error processing file:", error);
+    cleanUpTempFile(filePath);
+    return res.status(500).send("Error processing the uploaded file");
   }
 };
 
@@ -250,19 +250,25 @@ const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
 
   try {
     const document = await CreditReport.findOneAndUpdate(
-      { userId },
+      { _id: userId },
       { $set: { creditReportData }, $inc: { round: 1 }, filePath },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     const user = await User.findOneAndUpdate(
       { _id: userId },
-      { $set: { creditReport: document._id } },
+      { $push: { creditReport: document._id } }, // Use $push to add the new report to the array
       { new: true }
     )
       .populate("subscriptionPlan")
-      .populate("creditReport")
-      .populate("documents")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, // Sort documents by createdAt in descending order
+      })
+      .populate({
+        path: "documents",
+        options: { sort: { createdAt: -1 } }, // Sort documents by createdAt in descending order
+      })
       .populate("letters")
       .select("-password");
 
@@ -275,33 +281,46 @@ const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
 
 const parsePdfAndStore = async (pdfContent, userId, filePath) => {
   try {
-    const creditReportData = parsePdfText(pdfContent);
+    const creditReportData = await parsePdfText(pdfContent);
+    console.log("storing", userId);
 
-    const document = await CreditReport.findOneAndUpdate(
-      { userId },
-      { $set: { creditReportData }, $inc: { round: 1 }, filePath },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    // Create a new credit report instance
+    const newDocument = new CreditReport({
+      creditReportData,
+      filePath,
+      round: 1, // If you want the round value to start at 1
+      userId,
+    });
 
+    // Save the new credit report
+    const document = await newDocument.save();
+
+    // Add the new credit report to the user's creditReport array
     const user = await User.findOneAndUpdate(
       { _id: userId },
-      { $set: { creditReport: document._id } },
+      { $push: { creditReport: document._id } }, // Use $push to add to the array
       { new: true }
     )
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } },
+      })
+      .populate({
+        path: "documents",
+        options: { sort: { createdAt: -1 } },
+      })
       .populate("documents")
       .populate("letters")
       .select("-password");
 
+    console.log("done storing to DB");
     return { status: 200, data: { user, report: document } };
   } catch (error) {
     console.error("Error saving credit report data: ", error);
     return { status: 500, message: "Internal server error" };
   }
 };
-
-
 
 const cleanUpTempFile = (filePath) => {
   fs.unlink(filePath, (err) => {

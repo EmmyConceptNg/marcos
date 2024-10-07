@@ -11,7 +11,10 @@ export const login = async (req, res) => {
 
   const user = await User.findOne({ email: signdetails.email })
     .populate("subscriptionPlan")
-    .populate("creditReport")
+    .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
     .populate("documents")
     .populate("letters");
 
@@ -59,7 +62,10 @@ export const loginGoogle = async (req, res) => {
     const signdetails = req.body;
     const user = await User.findOne({ email: signdetails.email })
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
       .populate("letters")
       .populate("documents")
       .select("-password")
@@ -135,7 +141,10 @@ export const register = async (req, res) => {
     const createUser = await User.create(detail);
     const populatedUser = await User.findById(createUser._id)
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
       .populate("documents")
       .select("-password");
 
@@ -202,7 +211,10 @@ export const updateUser = async (req, res) => {
   try {
     User.findByIdAndUpdate({ _id: userId }, { $set: req.body }, { new: true })
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
       .populate("letters")
       .select("-password")
       .then((user) =>
@@ -225,7 +237,10 @@ export const updatePassword = async (req, res) => {
       { new: true }
     )
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
       .select("-password")
       .then((user) =>
         res.status(200).json({ user, message: "Password Updated Successfully" })
@@ -249,7 +264,10 @@ export const updateImage = async (req, res) => {
       { new: true }
     )
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
       .populate("documents")
       .populate("letters")
       .select("-password")
@@ -289,7 +307,10 @@ export const updateDocument = async (req, res) => {
       { new: true }
     )
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
       .populate("letters")
       .populate("documents")
       .select("-password");
@@ -312,32 +333,40 @@ export const verifySSN = async (req, res) => {
 
     const options = {
       method: "GET",
-      url: `https://free-social-security-number-validator.p.rapidapi.com/?usa_social_security_number=${ssn}`,
+      url: `https://data.searchbug.com/api/search.aspx?CO_CODE=12690953&PASS=Finanzas@2020&TYPE=api_ppl&SSN=${ssn}&FORMAT=JSON`,
       headers: {
-        "x-rapidapi-key": "aee1c8fa29mshdc412456409135ep1fd536jsnb33a1880ca1d",
-        "x-rapidapi-host":
-          "free-social-security-number-validator.p.rapidapi.com",
+        // Add any necessary headers here
       },
     };
 
     const response = await axios.request(options);
+
+
+    console.log(response.data)
+
+    const isValid = response.data.is_valid; // Adjust based on actual response structure
+
     const user = await User.findOneAndUpdate(
       { _id: userId },
-      { ssnVerified: response.data.is_valid, ssn: ssn },
+      { ssnVerified: isValid, ssn: ssn },
       { new: true }
     )
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
       .populate("letters")
       .populate("documents")
       .select("-password");
-console.log(response.data.is_valid);
-    if (response.data.is_valid == "FALSE") {
+
+    console.log(isValid);
+    if (isValid === "FALSE") {
       const message = "Incorrect SSN, please verify";
-      res.status(200).json({ message, user, is_valid: response.data.is_valid });
+      res.status(200).json({ message, user, is_valid: isValid });
     } else {
       const message = "SSN Verified";
-      res.status(200).json({ message, user, is_valid: response.data.is_valid });
+      res.status(200).json({ message, user, is_valid: isValid });
     }
   } catch (error) {
     console.error(error);
@@ -350,7 +379,10 @@ export const deductBalance = async (req, res) => {
     // Find the user by ID
     const user = await User.findOne({ _id: req.body.userId })
       .populate("subscriptionPlan")
-      .populate("creditReport")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
       .populate("letters")
       .populate("documents")
       .select("-password");

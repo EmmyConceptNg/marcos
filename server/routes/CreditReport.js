@@ -1,5 +1,9 @@
-import express from 'express';
-import { getCreditReport, createCreditReport, uploadRecord } from '../controllers/CreditReportController.js';
+import express from "express";
+import {
+  getCreditReport,
+  createCreditReport,
+  uploadRecord,
+} from "../controllers/CreditReportController.js";
 import multer from "multer";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -7,21 +11,36 @@ import path from "path";
 
 const router = express.Router();
 
+// Get __dirname in ES module context
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-
+// Set up multer storage
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
     const imagesDir = path.join(__dirname, "public", "records");
+
+    // Ensure the directory exists, if not create it
     if (!fs.existsSync(imagesDir)) {
-      fs.mkdirSync(imagesDir, { recursive: true });
+      try {
+        fs.mkdirSync(imagesDir, { recursive: true });
+      } catch (err) {
+        console.error("Error creating directory: ", err);
+        return callback(new Error("Could not create directory"), false);
+      }
     }
-    callback(null, imagesDir); // Use the absolute path
+
+    console.log("Saving file to directory:", imagesDir); // Debugging log
+    callback(null, imagesDir);
   },
   filename: function (req, file, callback) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    callback(null, uniqueSuffix + path.extname(file.originalname));
+    const filename = uniqueSuffix + path.extname(file.originalname);
+    console.log("Generated file name:", filename); // Debugging log
+    callback(null, filename);
   },
 });
+
 
 // File filter to check for PDF and HTML
 const fileFilter = (req, file, callback) => {
@@ -32,20 +51,12 @@ const fileFilter = (req, file, callback) => {
   }
 };
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const imagesDir = path.join(__dirname, "public", "records");
-
-if (!fs.existsSync(imagesDir)) {
-  fs.mkdirSync(imagesDir, { recursive: true });
-}
-
+// Set up multer upload
 const upload = multer({ storage: storage, fileFilter: fileFilter });
 
-
-
-router.get('/creditreport', getCreditReport);
-router.post('/creditreport', createCreditReport);
+// Routes
+router.get("/creditreport", getCreditReport);
+router.post("/creditreport", createCreditReport);
 router.post("/upload/:userId", upload.single("file"), uploadRecord);
 
 export default router;

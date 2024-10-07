@@ -30,6 +30,7 @@ export default function DisputeCenters() {
   const [attacking, setAttacking] = useState(false);
   const [disputes, setDisputes] = useState([]);
   const [inquiries, setInquiries] = useState([]);
+  const [personalInfo, setPersonalInfo] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [checkboxStates, setCheckboxStates] = useState({});
   const [showLoader, setShowLoader] = useState(attacking);
@@ -80,7 +81,7 @@ export default function DisputeCenters() {
       }, 2000);
       return;
     }
-    // if (user?.creditReport?.round > 4) {
+    // if (user?.creditReport[0]?.round > 4) {
     //   notify("Error: Sorry you've used up your rounds", "error");
     //   return;
     // }
@@ -124,12 +125,30 @@ export default function DisputeCenters() {
           checkboxStates?.inquiries?.TUC[index]
       ),
     };
+    const selectedPersonalInfo = {
+      EQF: personalInfo.filter(
+        (inquiry, index) =>
+          inquiry.data.credit_bereau === "Equifax" &&
+          checkboxStates?.personalInfo?.EQF[index]
+      ),
+      EXP: personalInfo.filter(
+        (inquiry, index) =>
+          inquiry.data.credit_bereau === "Experian" &&
+          checkboxStates?.personalInfo?.EXP[index]
+      ),
+      TUC: personalInfo.filter(
+        (inquiry, index) =>
+          inquiry.data.credit_bereau === "TransUnion" &&
+          checkboxStates?.personalInfo?.TUC[index]
+      ),
+    };
 
     // Combine all selected items into one array
     const selectedItems = {
       disputes: selectedDisputes,
       accounts: selectedAccounts,
       inquiries: selectedInquiries,
+      personalInfo: selectedPersonalInfo,
     };
 
     // Set up the endpoint and payload for the POST request
@@ -180,6 +199,9 @@ export default function DisputeCenters() {
       ) ||
       ["EQF", "EXP", "TUC"].some((bureau) =>
         checkboxStates.inquiries[bureau]?.some((checked) => checked)
+      ) ||
+      ["EQF", "EXP", "TUC"].some((bureau) =>
+        checkboxStates.personalInfo[bureau]?.some((checked) => checked)
       )
     );
   };
@@ -324,10 +346,12 @@ export default function DisputeCenters() {
                 disputes={disputes}
                 accounts={accounts}
                 inquiries={inquiries}
+                personalInfo={personalInfo}
                 checkboxStates={checkboxStates}
                 setDisputes={setDisputes}
                 setAccounts={setAccounts}
                 setInquiries={setInquiries}
+                setPersonalInfo={setPersonalInfo}
                 setCheckboxStates={setCheckboxStates}
               />
             )}
@@ -352,7 +376,7 @@ const queryAccount = (user) => {
   const negative = [];
   // Process account history for negative items
   const accountHistory =
-    user?.creditReport?.creditReportData?.account_history || [];
+    user?.creditReport[0]?.creditReportData?.account_history || [];
   accountHistory.forEach((account) => {
     const structuredAccountDetails = {
       EQF: {},
@@ -405,7 +429,7 @@ const identifyNegativeItems = (user) => {
 
   // Process public records for negative items
   const publicRecords =
-    user?.creditReport?.creditReportData?.public_information || [];
+    user?.creditReport[0]?.creditReportData?.public_information || [];
   publicRecords.forEach((record, recordIndex) => {
     // The recordIndex offset ensures unique indexes
     const index = recordIndex;
@@ -466,6 +490,8 @@ function Disputes({
   setDisputes,
   inquiries,
   setInquiries,
+  personalInfo,
+  setPersonalInfo,
   accounts,
   setAccounts,
   checkboxStates,
@@ -482,9 +508,12 @@ function Disputes({
     setAccounts(queries);
     setCustomMessages(messageState);
 
-    const userInquiries = user?.creditReport?.creditReportData?.inquiries || [];
-
+    const userInquiries = user?.creditReport[0]?.creditReportData?.inquiries || [];
     setInquiries(userInquiries);
+
+    const userPersonalInfo =
+      user?.creditReport[0]?.creditReportData?.personal_information || [];
+    setPersonalInfo(userInquiries);
 
     // Initialize states for disputes, inquiries, and accounts separately
     const newCheckboxState = {
@@ -506,6 +535,17 @@ function Disputes({
           .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
           .map(() => false),
         TUC: userInquiries
+          .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
+          .map(() => false),
+      },
+      personalInfo: {
+        EQF: userPersonalInfo
+          .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
+          .map(() => false),
+        EXP: userPersonalInfo
+          .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
+          .map(() => false),
+        TUC: userPersonalInfo
           .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
           .map(() => false),
       },
@@ -1030,7 +1070,7 @@ function Attacks({
 
   return (
     <>
-      {!user?.letters?.letterPaths?.length && user?.creditReport?.round < 2 ? (
+      {!user?.letters?.letterPaths?.length && user?.creditReport[0]?.round < 2 ? (
         <Box display="flex" alignItems="center" justifyContent="center">
           <Button variant="contained" onClick={() => setType("disputing")}>
             Start new dispute
@@ -1048,7 +1088,7 @@ function Attacks({
                 Credit report was uploaded
               </Text>
               <Text fs="20px" fw="700" color="#131C30">
-                {moment(user.creditReport.createdAt).startOf("day").fromNow()}
+                {moment(user.creditReport[0].createdAt).startOf("day").fromNow()}
               </Text>
             </Stack>
 
@@ -1300,18 +1340,63 @@ function InquiryBox({
     </Box>
   );
 }
+function PersonalInfoBox({
+  bureau,
+  personalInfo,
+  infoIndex,
+  onCheckboxChange,
+  checkboxStates,
+}) {
+  const { creditor_name, data } = personalInfo;
+  const isChecked = checkboxStates?.personalInfo?.[bureau]?.[infoIndex] || false;
+
+  return (
+    <Box display="flex" flexDirection="row" marginBottom={2}>
+      <Box
+        border="1px solid #FF9D43"
+        borderRadius="10px"
+        padding={2}
+        width="300px"
+      >
+        <Stack spacing={1}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Checkbox
+              checked={isChecked}
+              onChange={() => onCheckboxChange("personalInfo", infoIndex, bureau)}
+              sx={{
+                color: "#FF9D43",
+                "&.Mui-checked": {
+                  color: "#FF9D43",
+                },
+              }}
+            />
+            <Typography
+              sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
+            >
+              {creditor_name} - {data.credit_bereau}
+            </Typography>
+          </Stack>
+        </Stack>
+      </Box>
+    </Box>
+  );
+}
 
 function RoundMenu({ user, attacking, setType }) {
   return (
     <>
-      {!user?.creditReport?.round > 5 && (
+      {!user?.creditReport[0]?.round > 5 && (
         <Button
           sx={{ mb: 2 }}
           variant="contained"
           loading={attacking}
           onClick={() => setType("disputing")}
         >
-          {`Start Round ${user?.creditReport?.round ? user?.creditReport?.round + 1 : 1}`}
+          {`Start Round ${user?.creditReport[0]?.round ? user?.creditReport[0]?.round + 1 : 1}`}
         </Button>
       )}
     </>

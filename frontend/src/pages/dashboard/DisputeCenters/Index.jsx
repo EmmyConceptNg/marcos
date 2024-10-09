@@ -107,6 +107,12 @@ export default function DisputeCenters() {
         checkboxStates.accounts[index].EXP ||
         checkboxStates.accounts[index].TUC
     );
+    const selectedPersonalInfo = personalInfo.filter(
+      (_, index) =>
+        checkboxStates.personalInfo[index].EQF ||
+        checkboxStates.personalInfo[index].EXP ||
+        checkboxStates.personalInfo[index].TUC
+    );
 
     const selectedInquiries = {
       EQF: inquiries.filter(
@@ -125,23 +131,7 @@ export default function DisputeCenters() {
           checkboxStates?.inquiries?.TUC[index]
       ),
     };
-    const selectedPersonalInfo = {
-      EQF: personalInfo.filter(
-        (inquiry, index) =>
-          inquiry.data.credit_bereau === "Equifax" &&
-          checkboxStates?.personalInfo?.EQF[index]
-      ),
-      EXP: personalInfo.filter(
-        (inquiry, index) =>
-          inquiry.data.credit_bereau === "Experian" &&
-          checkboxStates?.personalInfo?.EXP[index]
-      ),
-      TUC: personalInfo.filter(
-        (inquiry, index) =>
-          inquiry.data.credit_bereau === "TransUnion" &&
-          checkboxStates?.personalInfo?.TUC[index]
-      ),
-    };
+    
 
     // Combine all selected items into one array
     const selectedItems = {
@@ -508,14 +498,14 @@ function Disputes({
     setAccounts(queries);
     setCustomMessages(messageState);
 
-    const userInquiries = user?.creditReport[0]?.creditReportData?.inquiries || [];
+    const userInquiries =
+      user?.creditReport[0]?.creditReportData?.inquiries || [];
     setInquiries(userInquiries);
 
     const userPersonalInfo =
       user?.creditReport[0]?.creditReportData?.personal_information || [];
-    setPersonalInfo(userInquiries);
+    setPersonalInfo(userPersonalInfo);
 
-    // Initialize states for disputes, inquiries, and accounts separately
     const newCheckboxState = {
       disputes: negatives.map(() => ({
         EQF: false,
@@ -538,27 +528,22 @@ function Disputes({
           .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
           .map(() => false),
       },
-      personalInfo: {
-        EQF: userPersonalInfo
-          .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
-          .map(() => false),
-        EXP: userPersonalInfo
-          .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
-          .map(() => false),
-        TUC: userPersonalInfo
-          .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
-          .map(() => false),
-      },
+      personalInfo: userPersonalInfo.map(() => ({
+        EQF: false,
+        EXP: false,
+        TUC: false,
+      })),
     };
 
     setCheckboxStates(newCheckboxState);
   }, [user]);
 
+
   const handleSelectAllCheckbox = (type, checked) => {
     setCheckboxStates((prevState) => {
       const newState = { ...prevState };
 
-      if (type === "disputes" || type === "accounts") {
+      if (type === "disputes" || type === "accounts" || type === 'personalInfo') {
         newState[type] = prevState[type].map(() => ({
           EQF: checked,
           EXP: checked,
@@ -641,93 +626,136 @@ function Disputes({
         spacing={{ sm: 4, xs: 1 }}
         sx={{ overflow: "hidden", overflowX: "auto" }}
       >
+        {personalInfo.length > 0 && (
+          <>
+            <Divider />
+            <Box p={2} bgcolor="#FF9D43">
+              <Text fs="20px" fw="700" color="#131C30" mb={2}>
+                Personal Information
+              </Text>
+            </Box>
+            {personalInfo.map((info, infoIndex) => {
+              console.log(info);
+              return (
+                <Stack direction="row" spacing={2} key={infoIndex}>
+                  {["EQF", "EXP", "TUC"].map(
+                    (bureau) =>
+                      info.data[bureau] && (
+                        <PersonalInfoBox
+                          key={`${bureau}-${infoIndex}`}
+                          bureau={bureau}
+                          personalInfo={info}
+                          infoIndex={infoIndex}
+                          onCheckboxChange={handleCheckboxChange}
+                          checkboxStates={checkboxStates}
+                        />
+                      )
+                  )}
+                </Stack>
+              );
+            })}
+          </>
+        )}
+      </Stack>
+      <Stack
+        direction="column"
+        spacing={{ sm: 4, xs: 1 }}
+        sx={{ overflow: "hidden", overflowX: "auto" }}
+      >
         {disputes.length > 0 && (
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Checkbox
-              onChange={(e) =>
-                handleSelectAllCheckbox("disputes", e.target.checked)
-              }
-              checked={checkboxStates.disputes?.every(
-                (checkboxes) =>
-                  checkboxes.EQF && checkboxes.EXP && checkboxes.TUC
-              )}
-              sx={{
-                color: "#FF9D43",
-                "&.Mui-checked": {
+          <>
+            <Box p={2} bgcolor="#FF9D43">
+              <Text fs="20px" fw="700" color="#131C30" mb={2}>
+                D
+              </Text>
+            </Box>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Checkbox
+                onChange={(e) =>
+                  handleSelectAllCheckbox("disputes", e.target.checked)
+                }
+                checked={checkboxStates.disputes?.every(
+                  (checkboxes) =>
+                    checkboxes.EQF && checkboxes.EXP && checkboxes.TUC
+                )}
+                sx={{
                   color: "#FF9D43",
-                },
-              }}
-            />
-            <Text fs="20px" fw="550" color="#131C30" mb={2}>
-              Select All
-            </Text>
+                  "&.Mui-checked": {
+                    color: "#FF9D43",
+                  },
+                }}
+              />
+              <Text fs="20px" fw="550" color="#131C30" mb={2}>
+                Select All
+              </Text>
 
-            <Checkbox
-              onChange={(e) =>
-                handleSelectAllBureauCheckbox(
-                  "disputes",
-                  e.target.checked,
-                  "EQF"
-                )
-              }
-              checked={checkboxStates.disputes?.every(
-                (checkboxes) => checkboxes.EQF
-              )}
-              sx={{
-                color: "#FF9D43",
-                "&.Mui-checked": {
+              <Checkbox
+                onChange={(e) =>
+                  handleSelectAllBureauCheckbox(
+                    "disputes",
+                    e.target.checked,
+                    "EQF"
+                  )
+                }
+                checked={checkboxStates.disputes?.every(
+                  (checkboxes) => checkboxes.EQF
+                )}
+                sx={{
                   color: "#FF9D43",
-                },
-              }}
-            />
-            <Text fs="20px" fw="550" color="#131C30" mb={2}>
-              Equifax
-            </Text>
+                  "&.Mui-checked": {
+                    color: "#FF9D43",
+                  },
+                }}
+              />
+              <Text fs="20px" fw="550" color="#131C30" mb={2}>
+                Equifax
+              </Text>
 
-            <Checkbox
-              onChange={(e) =>
-                handleSelectAllBureauCheckbox(
-                  "disputes",
-                  e.target.checked,
-                  "EXP"
-                )
-              }
-              checked={checkboxStates.disputes?.every(
-                (checkboxes) => checkboxes.EXP
-              )}
-              sx={{
-                color: "#FF9D43",
-                "&.Mui-checked": {
+              <Checkbox
+                onChange={(e) =>
+                  handleSelectAllBureauCheckbox(
+                    "disputes",
+                    e.target.checked,
+                    "EXP"
+                  )
+                }
+                checked={checkboxStates.disputes?.every(
+                  (checkboxes) => checkboxes.EXP
+                )}
+                sx={{
                   color: "#FF9D43",
-                },
-              }}
-            />
-            <Text fs="20px" fw="550" color="#131C30" mb={2}>
-              Experian
-            </Text>
+                  "&.Mui-checked": {
+                    color: "#FF9D43",
+                  },
+                }}
+              />
+              <Text fs="20px" fw="550" color="#131C30" mb={2}>
+                Experian
+              </Text>
 
-            <Checkbox
-              onChange={(e) =>
-                handleSelectAllBureauCheckbox(
-                  "disputes",
-                  e.target.checked,
-                  "TUC"
-                )
-              }
-              checked={checkboxStates.disputes?.every(
-                (checkboxes) => checkboxes.TUC
-              )}
-              sx={{
-                color: "#FF9D43",
-                "&.Mui-checked": {
+              <Checkbox
+                onChange={(e) =>
+                  handleSelectAllBureauCheckbox(
+                    "disputes",
+                    e.target.checked,
+                    "TUC"
+                  )
+                }
+                checked={checkboxStates.disputes?.every(
+                  (checkboxes) => checkboxes.TUC
+                )}
+                sx={{
                   color: "#FF9D43",
-                },
-              }}
-            />
-            <Text fs="20px" fw="550" color="#131C30" mb={2}>
-              TransUnion
-            </Text>
-          </Stack>
+                  "&.Mui-checked": {
+                    color: "#FF9D43",
+                  },
+                }}
+              />
+              <Text fs="20px" fw="550" color="#131C30" mb={2}>
+                TransUnion
+              </Text>
+            </Stack>
+          </>
         )}
         {disputes.map((dispute, infoIndex) => (
           <Box key={infoIndex} sx={{ mb: 4 }}>
@@ -768,76 +796,85 @@ function Disputes({
       </Stack>
 
       {bureauInquiries && (
-        <Box>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Checkbox
-              onChange={(e) =>
-                handleSelectAllCheckbox("inquiries", e.target.checked)
-              }
-              checked={Object.keys(checkboxStates.inquiries || {}).every(
-                (bureau) => checkboxStates.inquiries[bureau].every(Boolean)
-              )}
-              sx={{
-                color: "#FF9D43",
-                "&.Mui-checked": {
-                  color: "#FF9D43",
-                },
-              }}
-            />
-            <Text fs="18px" fw="550" color={"#131C30"} sx={{ mb: 2 }}>
-              Select All Inquiries
+        <>
+          <Box p={2} bgcolor="#FF9D43" my={5}>
+            <Text fs="20px" fw="700" color="#131C30" mb={2}>
+              Inquiries
             </Text>
-
-            {Object.keys(bureauInquiries).map((bureau) => (
-              <>
-                <Checkbox
-                  onChange={(e) =>
-                    handleSelectAllBureauCheckboxInquiries(
-                      e.target.checked,
-                      bureau
-                    )
-                  }
-                  checked={checkboxStates?.inquiries?.[bureau]?.every(Boolean)}
-                  sx={{
+          </Box>
+          <Box>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Checkbox
+                onChange={(e) =>
+                  handleSelectAllCheckbox("inquiries", e.target.checked)
+                }
+                checked={Object.keys(checkboxStates.inquiries || {}).every(
+                  (bureau) => checkboxStates.inquiries[bureau].every(Boolean)
+                )}
+                sx={{
+                  color: "#FF9D43",
+                  "&.Mui-checked": {
                     color: "#FF9D43",
-                    "&.Mui-checked": {
-                      color: "#FF9D43",
-                    },
-                  }}
-                />
-                <Text fs="18px" fw="550" color="#131C30" mb={2}>
-                  {bureau}
-                </Text>
-              </>
-            ))}
-          </Stack>
+                  },
+                }}
+              />
+              <Text fs="18px" fw="550" color={"#131C30"} sx={{ mb: 2 }}>
+                Select All Inquiries
+              </Text>
 
-          {Object.keys(bureauInquiries).map(
-            (bureau) =>
-              bureauInquiries[bureau]?.length > 0 && (
-                <Grid container key={`grid-${bureau}`}>
-                  {bureauInquiries[bureau].map((inquiry, index) => (
-                    <Grid
-                      item
-                      md={3}
-                      sm={6}
-                      lg={3}
-                      xs={12}
-                      key={`${bureau}-${index}`}
-                    >
-                      <InquiryBox
-                        bureau={bureau}
-                        inquiries={inquiry}
-                        infoIndex={index}
-                        onCheckboxChange={handleCheckboxChange}
-                        checkboxStates={checkboxStates}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              )
-          )}
-        </Box>
+              {Object.keys(bureauInquiries).map((bureau) => (
+                <>
+                  <Checkbox
+                    onChange={(e) =>
+                      handleSelectAllBureauCheckboxInquiries(
+                        e.target.checked,
+                        bureau
+                      )
+                    }
+                    checked={checkboxStates?.inquiries?.[bureau]?.every(
+                      Boolean
+                    )}
+                    sx={{
+                      color: "#FF9D43",
+                      "&.Mui-checked": {
+                        color: "#FF9D43",
+                      },
+                    }}
+                  />
+                  <Text fs="18px" fw="550" color="#131C30" mb={2}>
+                    {bureau}
+                  </Text>
+                </>
+              ))}
+            </Stack>
+
+            {Object.keys(bureauInquiries).map(
+              (bureau) =>
+                bureauInquiries[bureau]?.length > 0 && (
+                  <Grid container key={`grid-${bureau}`}>
+                    {bureauInquiries[bureau].map((inquiry, index) => (
+                      <Grid
+                        item
+                        md={3}
+                        sm={6}
+                        lg={3}
+                        xs={12}
+                        key={`${bureau}-${index}`}
+                      >
+                        <InquiryBox
+                          bureau={bureau}
+                          inquiries={inquiry}
+                          infoIndex={index}
+                          onCheckboxChange={handleCheckboxChange}
+                          checkboxStates={checkboxStates}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                )
+            )}
+          </Box>
+        </>
       )}
 
       <Stack
@@ -1329,11 +1366,19 @@ function InquiryBox({
                 },
               }}
             />
-            <Typography
-              sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
-            >
-              {creditor_name} - {data.credit_bereau}
-            </Typography>
+            <Box>
+              <Typography
+                sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
+              >
+                <span style={{ fontWeight: "bold" }}>{creditor_name} </span>-
+                {data.credit_bereau}
+              </Typography>
+              <Typography
+                sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
+              >
+                {data.date_of_enquiry}
+              </Typography>
+            </Box>
           </Stack>
         </Stack>
       </Box>
@@ -1347,44 +1392,56 @@ function PersonalInfoBox({
   onCheckboxChange,
   checkboxStates,
 }) {
-  const { creditor_name, data } = personalInfo;
-  const isChecked = checkboxStates?.personalInfo?.[bureau]?.[infoIndex] || false;
+  const { label, data } = personalInfo;
+  const isChecked =
+    checkboxStates?.personalInfo?.[bureau]?.[infoIndex] || false;
 
   return (
+      data[bureau] !== "-" ? (
     <Box display="flex" flexDirection="row" marginBottom={2}>
-      <Box
-        border="1px solid #FF9D43"
-        borderRadius="10px"
-        padding={2}
-        width="300px"
-      >
-        <Stack spacing={1}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Checkbox
-              checked={isChecked}
-              onChange={() => onCheckboxChange("personalInfo", infoIndex, bureau)}
-              sx={{
-                color: "#FF9D43",
-                "&.Mui-checked": {
-                  color: "#FF9D43",
-                },
-              }}
-            />
-            <Typography
-              sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
+        <Box
+          border="1px solid #FF9D43"
+          borderRadius="10px"
+          padding={2}
+          width="300px"
+        >
+          <Stack spacing={1}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
             >
-              {creditor_name} - {data.credit_bereau}
-            </Typography>
+              <Checkbox
+                checked={isChecked}
+                onChange={() =>
+                  onCheckboxChange("personalInfo", infoIndex, bureau)
+                }
+                sx={{
+                  color: "#FF9D43",
+                  "&.Mui-checked": {
+                    color: "#FF9D43",
+                  },
+                }}
+              />
+              <Typography
+                sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
+              >
+                {label} -{" "}
+                <span style={{ fontWeight: "bold" }}>{data[bureau]}</span>
+              </Typography>
+              <Typography
+                sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
+              >
+                {bureau}
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
-      </Box>
-    </Box>
+        </Box>
+        </Box>
+      ) : null
   );
 }
+
 
 function RoundMenu({ user, attacking, setType }) {
   return (

@@ -252,15 +252,15 @@ const [report, setReport] = useState([])
   });
 
   useEffect(() => {
-   if (user && user.creditReport && user.creditReport.creditReportData) {
-     const summaryData = user.creditReport.creditReportData["summary"];
+   if (user && user.creditReport[0] && user.creditReport[0]?.creditReportData) {
+     const summaryData = user.creditReport[0]?.creditReportData["summary"];
      setReport(mapToRowsStructure(summaryData));
 
      //Credit score
      const creditScoreArray =
-       user.creditReport.creditReportData["credit_score"] ||
-       user.creditReport.creditReportData["fico®_score"] ||
-       user.creditReport.creditReportData["Vantage2"];
+       user.creditReport[0]?.creditReportData["credit_score"] ||
+       user.creditReport[0]?.creditReportData["fico®_score"] ||
+       user.creditReport[0]?.creditReportData["Vantage2"];
      if (creditScoreArray && creditScoreArray.length > 0) {
        const creditScoreObject = creditScoreArray.find(
          (entry) =>

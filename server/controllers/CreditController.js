@@ -77,10 +77,14 @@ export const addUserCredit = async (req, res) => {
   const newBalance = getUser.balance + (Number(decrypt({iv, content:amount})) / 100);
 
   User.findOneAndUpdate({ _id: userId }, { balance: newBalance }, { new: true })
-    .populate("subscriptionPlan")
-    .populate("creditReport")
-    .populate("letters")
-    .select("-password")
+   .populate("subscriptionPlan")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } }, 
+      })
+      .populate("documents")
+      .populate("letters")
+      .select("-password")
     .then((user) =>
       res.status(200).json({ user, message: "User Balance Added Successfully" })
     );

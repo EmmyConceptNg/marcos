@@ -117,14 +117,14 @@ export const parsePdfText = (pdfContent) => {
 
 const parsePersonalInformation = (line, section) => {
   const fields = [
-    "Credit Report Date:",
-    "Name:",
-    "Also Known As:",
-    "Former:",
-    "Date of Birth:",
-    "Current Address(es):",
-    "Previous Address(es):",
-    "Employers:",
+    "Credit Report Date",
+    "Name",
+    "Also Known As",
+    "Former",
+    "Date of Birth",
+    "Current Address(es)",
+    "Previous Address(es)",
+    "Employers",
   ];
 
   fields.forEach((field) => {
@@ -154,29 +154,29 @@ const parseCreditScore = (
 ) => {
   console.log("credit score line:", line); // Log each line in this section
 
-const extractData = (line) => {
-  // Split at first ':' to separate label part from data part
-  const [labelPart, dataPart] = line.split(":");
-  // Split the data part by tab character '\t'
-  const parts = dataPart.split("\t").map((part) => part.trim());
+  const extractData = (line) => {
+    // Split at first ':' to separate label part from data part
+    const [labelPart, dataPart] = line.split(":");
+    // Split the data part by tab character '\t'
+    const parts = dataPart.split("\t").map((part) => part.trim());
 
-  // Initialize an iterator for parts
-  const iterator = parts[Symbol.iterator]();
+    // Initialize an iterator for parts
+    const iterator = parts[Symbol.iterator]();
 
-  // Get the first non-empty part or fallback to "-"
-  const getNextPart = () => {
-    for (let part of iterator) {
-      if (part) return part;
-    }
-    return "-";
+    // Get the first non-empty part or fallback to "-"
+    const getNextPart = () => {
+      for (let part of iterator) {
+        if (part) return part;
+      }
+      return "-";
+    };
+
+    return {
+      TUC: getNextPart(),
+      EXP: getNextPart(),
+      EQF: getNextPart(),
+    };
   };
-
-  return {
-    TUC: getNextPart(),
-    EXP: getNextPart(),
-    EQF: getNextPart(),
-  };
-};
 
   if (isVantage && line.trim().length > 0 && !line.includes(":")) {
     // Handle Vantage score line
@@ -241,6 +241,65 @@ const extractData = (line) => {
   }
 };
 
+// const parseAccountHistory = (
+//   line,
+//   section,
+//   previousLine,
+//   lineBeforePrevious
+// ) => {
+//   const fields = [
+//     "Account #:",
+//     "Account Type:",
+//     "Account Type - Detail:",
+//     "Bureau Code:",
+//     "Account Status:",
+//     "Monthly Payment:",
+//     "Date Opened:",
+//     "Balance:",
+//     "No. of Months (terms):",
+//     "High Credit:",
+//     "Credit Limit:",
+//     "Past Due:",
+//     "Payment Status:",
+//     "Last Reported:",
+//     "Comments:",
+//     "Date Last Active:",
+//     "Date of Last Payment:",
+//   ];
+
+//   if (line.includes("Account #:")) {
+//     const accountName =
+//       lineBeforePrevious &&
+//       !fields.some((field) => lineBeforePrevious.includes(field))
+//         ? lineBeforePrevious.trim()
+//         : "Unknown Account";
+//     section.push({
+//       accountName: accountName,
+//       accountDetails: [],
+//     });
+//   }
+
+//   const currentAccount = section[section.length - 1];
+
+//   fields.forEach((field) => {
+//     if (line.includes(field)) {
+//       const dataArray = line.split(field)[1]?.trim().split("\t") || [
+//         "",
+//         "",
+//         "",
+//       ];
+//       currentAccount?.accountDetails?.push({
+//         label: field,
+//         data: {
+//           TUC: dataArray[0]?.trim() || "-",
+//           EXP: dataArray[1]?.trim() || "-",
+//           EQF: dataArray[2]?.trim() || "-",
+//         },
+//       });
+//     }
+//   });
+// };
+
 const parseAccountHistory = (
   line,
   section,
@@ -267,7 +326,7 @@ const parseAccountHistory = (
     "Date of Last Payment:",
   ];
 
-  if (line.includes("Account #:")) {
+  if (line.includes("Account #:") || line.includes("Account #")) {
     const accountName =
       lineBeforePrevious &&
       !fields.some((field) => lineBeforePrevious.includes(field))
@@ -277,9 +336,15 @@ const parseAccountHistory = (
       accountName: accountName,
       accountDetails: [],
     });
+    console.log("Initialized new account:", accountName);
   }
 
   const currentAccount = section[section.length - 1];
+
+  if (!currentAccount) {
+    console.warn("No current account initialized for line:", line);
+    return;
+  }
 
   fields.forEach((field) => {
     if (line.includes(field)) {
@@ -288,7 +353,7 @@ const parseAccountHistory = (
         "",
         "",
       ];
-      currentAccount?.accountDetails?.push({
+      currentAccount.accountDetails.push({
         label: field,
         data: {
           TUC: dataArray[0]?.trim() || "-",
@@ -296,6 +361,7 @@ const parseAccountHistory = (
           EQF: dataArray[2]?.trim() || "-",
         },
       });
+      console.log(`Added ${field} to account:`, currentAccount.accountName);
     }
   });
 };
@@ -349,51 +415,83 @@ const parseSummary = (line, section) => {
 };
 
 const parsePublicInformation = (line, section) => {
-  const infoTypes = ["Bankruptcy", "Tax Lien", "Civil Judgment", "Legal Item"];
-
-  const fields = [
-    "Type:",
-    "Status:",
-    "Date Filed/Reported:",
-    "Reference#:",
-    "Closing Date:",
-    "Court:",
-    "Liability:",
-    "Exempt Amount:",
-    "Asset Amount:",
-    "Remarks:",
-    "Date Settled:",
-    "Date Paid:",
+  const infoTypes = [
+    "Bankruptcy",
+    "Tax Lien",
+    "Civil Judgment",
+    "Legal Item",
+    "Garnishment",
+    "Fore Closure",
   ];
 
-  if (infoTypes.some((infoType) => line == infoType)) {
-    section.push({
-      infoType: line,
-      infoDetails: [],
-    });
+  const fields = [
+    "Type",
+    "Status",
+    "Date Filed/Reported",
+    "Reference#",
+    "Closing Date",
+    "Court",
+    "Liability",
+    "Exempt Amount",
+    "Asset Amount",
+    "Remarks",
+    "Date Settled",
+    "Date Paid",
+  ];
+
+  // Initialize a new entry if the line contains an info type
+  if (infoTypes.some((infoType) => line.includes(infoType))) {
+    const infoType = infoTypes.find((infoType) => line.includes(infoType));
+    if (!section.some((entry) => entry.infoType === infoType)) {
+      section.push({
+        infoType,
+        infoDetails: fields.map((field) => ({
+          label: field,
+          data: { TUC: "", EXP: "", EQF: "" },
+        })),
+      });
+      console.log("Initialized new public information entry:", infoType);
+    }
     return;
   }
 
   const currentInfo = section[section.length - 1];
 
+  if (!currentInfo) {
+    console.warn(
+      "No current public information entry initialized for line:",
+      line
+    );
+    return;
+  }
+
   fields.forEach((field) => {
     if (line.includes(field)) {
+      console.log('line includes:', field)
       const dataArray = line.split(field)[1]?.trim().split("\t") || [
         "",
         "",
         "",
       ];
-      currentInfo?.infoDetails?.push({
-        label: field,
-        data: {
-          TUC: dataArray[0]?.trim() || "-",
-          EXP: dataArray[1]?.trim() || "-",
-          EQF: dataArray[2]?.trim() || "-",
-        },
-      });
+      const detail = currentInfo.infoDetails.find(
+        (detail) => detail.label === field
+      );
+      if (detail) {
+        detail.data = {
+          TUC: dataArray[0]?.trim() || "",
+          EXP: dataArray[1]?.trim() || "",
+          EQF: dataArray[2]?.trim() || "",
+        };
+        console.log(
+          `Updated ${field} for public information:`,
+          currentInfo.infoType
+        );
+      }
     }
   });
 };
+
+
 
 const parseCreditorContacts = (line, section) => {
   section.push({ label: "", data: { TUC: line, EXP: "-", EQF: "-" } });

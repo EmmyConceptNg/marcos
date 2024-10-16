@@ -37,11 +37,10 @@ export default function DisputeCenters() {
   const [openNoBalance, setOpenNoBalance] = useState(false);
 
   useEffect(() => {
+    setShowLoader(attacking);
     if (!attacking) {
-      const timer = setTimeout(() => setShowLoader(false), 1000); // Wait 1 second before hiding the loader
+      const timer = setTimeout(() => setShowLoader(false), 1000);
       return () => clearTimeout(timer);
-    } else {
-      setShowLoader(true); // Show loader if attacking is true
     }
   }, [attacking]);
 
@@ -49,152 +48,95 @@ export default function DisputeCenters() {
   const navigate = useNavigate();
 
   const handleStartNewRound = async () => {
-    if (user?.balance == 0 || user?.balance < 2) {
-      console.log('me')
+    if (user?.balance < 2) {
       setOpenNoBalance(true);
       return false;
-    } else {
-      try {
-        const response = await axios.post("/api/auth/deduct-balance", {
-          userId: user._id,
-          amount: import.meta.env.VITE_ROUNDS_AMOUNT,
-        });
-        dispatch(setUser(response.data.user));
-        setType("disputing");
-        return true;
-      } catch (error) {
-        console.error("Failed to deduct balance:", error);
-        notify("Failed to start a new round. Please try again.", "error");
-        return false;
-      }
+    }
+    try {
+      const response = await axios.post("/api/auth/deduct-balance", {
+        userId: user._id,
+        amount: import.meta.env.VITE_ROUNDS_AMOUNT,
+      });
+      dispatch(setUser(response.data.user));
+      setType("disputing");
+      return true;
+    } catch (error) {
+      notify("Failed to start a new round. Please try again.", "error");
+      return false;
     }
   };
 
   const handleAttackNow = async () => {
-    // Compile the selected disputes, accounts, and inquiries
-
-    // Check if any checkboxes are selected
     if (!user.ssn) {
       notify("Error: Please update your personal details", "error");
-      setTimeout(() => {
-        navigate("/dashboard/settings");
-      }, 2000);
+      setTimeout(() => navigate("/dashboard/settings"), 2000);
       return;
     }
-    // if (user?.creditReport[0]?.round > 4) {
-    //   notify("Error: Sorry you've used up your rounds", "error");
-    //   return;
-    // }
     if (!isAnyCheckboxSelected()) {
       notify("Error: No items selected for the attack.", "error");
       return;
     }
-
-    const roundStarted = await handleStartNewRound();
-    if (!roundStarted) return; // Stop execution if round didn't start
+    if (!(await handleStartNewRound())) return;
 
     setAttacking(true);
-    const selectedDisputes = disputes.filter(
-      (_, index) =>
-        checkboxStates.disputes[index].EQF ||
-        checkboxStates.disputes[index].EXP ||
-        checkboxStates.disputes[index].TUC
-    );
+    const selectedItems = compileSelectedItems();
+    try {
+      const response = await axios.post("/api/letters", {
+        selectedItems,
+        userId: user._id,
+      });
+      dispatch(setUser(response.data.user));
+      notify("Success: Letters have been generated and sent!", "success");
+      setTimeout(() => setType("attacks"), 3000);
+    } catch (error) {
+      notify("Error: The attack could not be completed.", "error");
+    } finally {
+      setAttacking(false);
+    }
+  };
 
-    const selectedAccounts = accounts.filter(
-      (_, index) =>
-        checkboxStates.accounts[index].EQF ||
-        checkboxStates.accounts[index].EXP ||
-        checkboxStates.accounts[index].TUC
+  const compileSelectedItems = () => {
+    const selectedDisputes = filterSelectedItems(disputes, "disputes");
+    const selectedAccounts = filterSelectedItems(accounts, "accounts");
+    const selectedPersonalInfo = filterSelectedItems(
+      personalInfo,
+      "personalInfo"
     );
-    const selectedPersonalInfo = personalInfo.filter(
-      (_, index) =>
-        checkboxStates.personalInfo[index].EQF ||
-        checkboxStates.personalInfo[index].EXP ||
-        checkboxStates.personalInfo[index].TUC
-    );
-
     const selectedInquiries = {
-      EQF: inquiries.filter(
-        (inquiry, index) =>
-          inquiry.data.credit_bereau === "Equifax" &&
-          checkboxStates?.inquiries?.EQF[index]
-      ),
-      EXP: inquiries.filter(
-        (inquiry, index) =>
-          inquiry.data.credit_bereau === "Experian" &&
-          checkboxStates?.inquiries?.EXP[index]
-      ),
-      TUC: inquiries.filter(
-        (inquiry, index) =>
-          inquiry.data.credit_bereau === "TransUnion" &&
-          checkboxStates?.inquiries?.TUC[index]
-      ),
+      EQF: filterSelectedInquiries("Equifax"),
+      EXP: filterSelectedInquiries("Experian"),
+      TUC: filterSelectedInquiries("TransUnion"),
     };
-    
-
-    // Combine all selected items into one array
-    const selectedItems = {
+    return {
       disputes: selectedDisputes,
       accounts: selectedAccounts,
       inquiries: selectedInquiries,
       personalInfo: selectedPersonalInfo,
     };
-
-    // Set up the endpoint and payload for the POST request
-    const endpoint = "/api/letters";
-    const payload = {
-      selectedItems: selectedItems,
-      userId: user._id,
-    };
-
-    try {
-      setAttacking(true);
-
-      // Send a POST request to the server endpoint
-      const response = await axios.post(endpoint, payload);
-
-      // Handle the response from the server
-      console.log(response.data);
-      dispatch(setUser(response.data.user));
-      notify("Success: Letters have been generated and sent!", "success");
-
-      setTimeout(() => {
-        setType("attacks");
-      }, 3000);
-
-      setAttacking(false);
-    } catch (error) {
-      console.error("Attack failed:", error);
-
-      notify("Error: The attack could not be completed.", "error");
-      setTimeout(() => {
-        setAttacking(false);
-      }, 3000);
-    }
   };
 
-  // Helper function to check if any checkbox is selected
-  const isAnyCheckboxSelected = () => {
-    return (
-      disputes.some((_, index) =>
-        ["EQF", "EXP", "TUC"].some(
-          (bureau) => checkboxStates.disputes[index][bureau]
-        )
-      ) ||
-      accounts.some((_, index) =>
-        ["EQF", "EXP", "TUC"].some(
-          (bureau) => checkboxStates.accounts[index][bureau]
-        )
-      ) ||
-      ["EQF", "EXP", "TUC"].some((bureau) =>
-        checkboxStates.inquiries[bureau]?.some((checked) => checked)
-      ) ||
-      ["EQF", "EXP", "TUC"].some((bureau) =>
-        checkboxStates.personalInfo[bureau]?.some((checked) => checked)
+  const filterSelectedItems = (items, type) =>
+    items.filter((_, index) =>
+      ["EQF", "EXP", "TUC"].some(
+        (bureau) => checkboxStates[type][index][bureau]
       )
     );
-  };
+  const filterSelectedInquiries = (bureau) =>
+    inquiries.filter(
+      (inquiry, index) =>
+        inquiry.data.credit_bereau === bureau &&
+        checkboxStates.inquiries[bureau][index]
+    );
+
+  const isAnyCheckboxSelected = () =>
+    ["disputes", "accounts", "personalInfo"].some((type) =>
+      checkboxStates[type].some((checkboxes) =>
+        Object.values(checkboxes).some(Boolean)
+      )
+    ) ||
+    ["EQF", "EXP", "TUC"].some((bureau) =>
+      checkboxStates.inquiries[bureau].some(Boolean)
+    );
 
   return (
     <>
@@ -203,77 +145,15 @@ export default function DisputeCenters() {
       <Helmet>
         <title>Dispute Center</title>
       </Helmet>
-
       <Fade in={true} timeout={1000}>
         <Box sx={{ backgroundColor: "transparent" }}>
           <Stack spacing={3} sx={{ overflow: "hidden" }}>
-            <Stack direction="row" sx={{ width: { sm: "314px", xs: "100%" } }}>
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                onClick={() => {
-                  setType("disputing");
-                }}
-                sx={{
-                  width: { sm: "157px", xs: "100%" },
-                  height: "51px",
-                  borderTopLeftRadius: "10px",
-                  borderBottomLeftRadius: "10px",
-                  cursor: "pointer",
-                  border:
-                    type === "disputing"
-                      ? "1px solid #FF9D43"
-                      : "1px solid #CDCDCD",
-                }}
-              >
-                <Text
-                  fs="18px"
-                  fw="550"
-                  color={type === "disputing" ? "#FF9D43" : "#CDCDCD"}
-                >
-                  Disputing
-                </Text>
-              </Box>
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                onClick={() => {
-                  if (!attacking) {
-                    setType("attacks");
-                  } else {
-                    notify("Attacking!!! Please wait...", "info");
-                  }
-                }}
-                sx={{
-                  width: { sm: "157px", xs: "100%" },
-                  height: "51px",
-                  borderTopRightRadius: "10px",
-                  borderBottomRightRadius: "10px",
-                  cursor: "pointer",
-                  border:
-                    type === "attacks"
-                      ? "1px solid #FF9D43"
-                      : "1px solid #CDCDCD",
-                }}
-              >
-                <Text
-                  fs="18px"
-                  fw="550"
-                  color={type === "attacks" ? "#FF9D43" : "#CDCDCD"}
-                >
-                  Attacks
-                </Text>
-              </Box>
-            </Stack>
-
+            <TabSelector type={type} setType={setType} attacking={attacking} />
             {type === "disputing" && (
               <>
                 <Text fs="24px" fw="550" color="#131C30">
                   Disputes
                 </Text>
-
                 <Stack
                   direction="row"
                   spacing={2}
@@ -285,7 +165,6 @@ export default function DisputeCenters() {
                     placeholder="Search"
                     bgcolor="#fff"
                   />
-
                   <Stack
                     direction="row"
                     spacing={2}
@@ -301,37 +180,10 @@ export default function DisputeCenters() {
                 </Stack>
               </>
             )}
-            {showLoader && (
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  height: "100%",
-                  bgcolor: "rgba(0, 0, 0, 0.5)", // Adjust the opacity here
-                  position: "fixed", // Change to fixed to cover the whole page
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  zIndex: 9999, // Ensure this is the highest zIndex
-                }}
-              >
-                <Box
-                  component="img"
-                  src="/assets/icons/loader.gif"
-                  sx={{ width: "70px", height: "70px", borderRadius: "100%" }}
-                />
-                <Text color="#fff" fs="18px" fw="500" sx={{ mt: 2 }}>
-                  Disputing... Please Wait...
-                </Text>
-              </Box>
-            )}
-
+            {showLoader && <Loader />}
             {type === "disputing" && (
               <Disputes
                 handleAttackNow={handleAttackNow}
-                setAttacking={setAttacking}
                 attacking={attacking}
                 disputes={disputes}
                 accounts={accounts}
@@ -361,6 +213,73 @@ export default function DisputeCenters() {
     </>
   );
 }
+
+const TabSelector = ({ type, setType, attacking }) => (
+  <Stack direction="row" sx={{ width: { sm: "314px", xs: "100%" } }}>
+    <TabButton
+      active={type === "disputing"}
+      onClick={() => setType("disputing")}
+    >
+      Disputing
+    </TabButton>
+    <TabButton right={true}
+      active={type === "attacks"}
+      onClick={() => !attacking && setType("attacks")}
+    >
+      Attacks
+    </TabButton>
+  </Stack>
+);
+
+const TabButton = ({ active, onClick, children, right = false }) => (
+  <Box
+    display="flex"
+    justifyContent="center"
+    alignItems="center"
+    onClick={onClick}
+    sx={{
+      width: { sm: "157px", xs: "100%" },
+      height: "51px",
+      borderTopLeftRadius: right ? "0" : "10px",
+      borderBottomLeftRadius: right ? "0" : "10px",
+      borderTopRightRadius: right ? "10px" : "0",
+      borderBottomRightRadius: right ? "10px" : "0",
+      cursor: "pointer",
+      border: active ? "1px solid #FF9D43" : "1px solid #CDCDCD",
+    }}
+  >
+    <Text fs="18px" fw="550" color={active ? "#FF9D43" : "#CDCDCD"}>
+      {children}
+    </Text>
+  </Box>
+);
+
+const Loader = () => (
+  <Box
+    sx={{
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      height: "100%",
+      bgcolor: "rgba(0, 0, 0, 0.5)",
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100%",
+      zIndex: 9999,
+    }}
+  >
+    <Box
+      component="img"
+      src="/assets/icons/loader.gif"
+      sx={{ width: "70px", height: "70px", borderRadius: "100%" }}
+    />
+    <Text color="#fff" fs="18px" fw="500" sx={{ mt: 2 }}>
+      Disputing... Please Wait...
+    </Text>
+  </Box>
+);
 
 const queryAccount = (user) => {
   const negative = [];
@@ -490,60 +409,69 @@ function Disputes({
   const user = useSelector((state) => state.user.details);
   const [customMessages, setCustomMessages] = useState({});
 
-  useEffect(() => {
-    const { negatives, messageState } = identifyNegativeItems(user);
-    const queries = queryAccount(user);
+   useEffect(() => {
+     const { negatives, messageState } = identifyNegativeItems(user);
+     const queries = queryAccount(user);
 
-    setDisputes(negatives);
-    setAccounts(queries);
-    setCustomMessages(messageState);
+     setDisputes(negatives);
+     setAccounts(queries);
+     setCustomMessages(messageState);
 
-    const userInquiries =
-      user?.creditReport[0]?.creditReportData?.inquiries || [];
-    setInquiries(userInquiries);
+     const userInquiries =
+       user?.creditReport[0]?.creditReportData?.inquiries || [];
+     setInquiries(userInquiries);
 
-    const userPersonalInfo =
-      user?.creditReport[0]?.creditReportData?.personal_information || [];
-    setPersonalInfo(userPersonalInfo);
+     const userPersonalInfo =
+       user?.creditReport[0]?.creditReportData?.personal_information || [];
+     setPersonalInfo(userPersonalInfo);
 
-    const newCheckboxState = {
-      disputes: negatives.map(() => ({
-        EQF: false,
-        EXP: false,
-        TUC: false,
-      })),
-      accounts: queries.map(() => ({
-        EQF: false,
-        EXP: false,
-        TUC: false,
-      })),
-      inquiries: {
-        EQF: userInquiries
-          .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
-          .map(() => false),
-        EXP: userInquiries
-          .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
-          .map(() => false),
-        TUC: userInquiries
-          .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
-          .map(() => false),
-      },
-      personalInfo: userPersonalInfo.map(() => ({
-        EQF: false,
-        EXP: false,
-        TUC: false,
-      })),
-    };
+     const newCheckboxState = {
+       disputes: negatives.map(() => ({
+         EQF: false,
+         EXP: false,
+         TUC: false,
+       })),
+       accounts: queries.map(() => ({
+         EQF: false,
+         EXP: false,
+         TUC: false,
+       })),
+       inquiries: {
+         EQF: userInquiries
+           .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
+           .map(() => false),
+         EXP: userInquiries
+           .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
+           .map(() => false),
+         TUC: userInquiries
+           .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
+           .map(() => false),
+       },
+       personalInfo: userPersonalInfo.map(() => ({
+         EQF: false,
+         EXP: false,
+         TUC: false,
+       })),
+     };
 
-    setCheckboxStates(newCheckboxState);
-  }, [user]);
+     setCheckboxStates(newCheckboxState);
+   }, [user]);
+
+  // Filter out personal info entries that have "-" for all bureaus
+  const filteredPersonalInfo = personalInfo.filter((info) =>
+    ["EQF", "EXP", "TUC"].some((bureau) => info.data[bureau] !== "-")
+  );
 
 
   const handleSelectAllCheckbox = (type, checked) => {
     setCheckboxStates((prevState) => {
       const newState = { ...prevState };
 
-      if (type === "disputes" || type === "accounts" || type === 'personalInfo') {
+      if (
+        type === "disputes" ||
+        type === "accounts" ||
+        type === "personalInfo"
+      ) {
         newState[type] = prevState[type].map(() => ({
           EQF: checked,
           EXP: checked,
@@ -626,7 +554,7 @@ function Disputes({
         spacing={{ sm: 4, xs: 1 }}
         sx={{ overflow: "hidden", overflowX: "auto" }}
       >
-        {personalInfo.length > 0 && (
+        {filteredPersonalInfo.length > 0 && (
           <>
             <Divider />
             <Box p={2} bgcolor="#FF9D43">
@@ -634,23 +562,15 @@ function Disputes({
                 Personal Information
               </Text>
             </Box>
-            {personalInfo.map((info, infoIndex) => {
-              console.log(info);
+            {filteredPersonalInfo.map((info, infoIndex) => {
               return (
                 <Stack direction="row" spacing={2} key={infoIndex}>
-                  {["EQF", "EXP", "TUC"].map(
-                    (bureau) =>
-                      info.data[bureau] && (
-                        <PersonalInfoBox
-                          key={`${bureau}-${infoIndex}`}
-                          bureau={bureau}
-                          personalInfo={info}
-                          infoIndex={infoIndex}
-                          onCheckboxChange={handleCheckboxChange}
-                          checkboxStates={checkboxStates}
-                        />
-                      )
-                  )}
+                  <PersonalInfoBox
+                    personalInfo={info}
+                    infoIndex={infoIndex}
+                    onCheckboxChange={handleCheckboxChange}
+                    checkboxStates={checkboxStates}
+                  />
                 </Stack>
               );
             })}
@@ -664,9 +584,11 @@ function Disputes({
       >
         {disputes.length > 0 && (
           <>
-            <Box p={2} bgcolor="#FF9D43">
+          <Divider />
+          
+            <Box p={2} bgcolor="#FF9D43" mb={5} >
               <Text fs="20px" fw="700" color="#131C30" mb={2}>
-                D
+                Public Information
               </Text>
             </Box>
             <Stack direction="row" spacing={2} alignItems="center">
@@ -852,24 +774,28 @@ function Disputes({
               (bureau) =>
                 bureauInquiries[bureau]?.length > 0 && (
                   <Grid container key={`grid-${bureau}`}>
-                    {bureauInquiries[bureau].map((inquiry, index) => (
-                      <Grid
-                        item
-                        md={3}
-                        sm={6}
-                        lg={3}
-                        xs={12}
-                        key={`${bureau}-${index}`}
-                      >
-                        <InquiryBox
-                          bureau={bureau}
-                          inquiries={inquiry}
-                          infoIndex={index}
-                          onCheckboxChange={handleCheckboxChange}
-                          checkboxStates={checkboxStates}
-                        />
-                      </Grid>
-                    ))}
+                    {bureauInquiries[bureau]
+                      .filter((inquiry) =>
+                        Object.values(inquiry.data).some((value) => value)
+                      ) // Filters empty inquiries
+                      .map((inquiry, index) => (
+                        <Grid
+                          item
+                          md={3}
+                          sm={6}
+                          lg={3}
+                          xs={12}
+                          key={`${bureau}-${index}`}
+                        >
+                          <InquiryBox
+                            bureau={bureau}
+                            inquiries={inquiry}
+                            infoIndex={index}
+                            onCheckboxChange={handleCheckboxChange}
+                            checkboxStates={checkboxStates}
+                          />
+                        </Grid>
+                      ))}
                   </Grid>
                 )
             )}
@@ -884,7 +810,11 @@ function Disputes({
       >
         {accounts.length > 0 && (
           <>
-            <Divider />
+            <Box p={2} bgcolor="#FF9D43" mt={10} mb={5}>
+            <Text fs="20px" fw="700" color="#131C30" mb={2}>
+              Account History
+            </Text>
+          </Box>
             <Stack direction="row" spacing={2} alignItems="center">
               <Checkbox
                 onChange={(e) =>
@@ -1107,7 +1037,8 @@ function Attacks({
 
   return (
     <>
-      {!user?.letters?.letterPaths?.length && user?.creditReport[0]?.round < 2 ? (
+      {!user?.letters?.letterPaths?.length &&
+      user?.creditReport[0]?.round < 2 ? (
         <Box display="flex" alignItems="center" justifyContent="center">
           <Button variant="contained" onClick={() => setType("disputing")}>
             Start new dispute
@@ -1125,7 +1056,9 @@ function Attacks({
                 Credit report was uploaded
               </Text>
               <Text fs="20px" fw="700" color="#131C30">
-                {moment(user.creditReport[0].createdAt).startOf("day").fromNow()}
+                {moment(user.creditReport[0].createdAt)
+                  .startOf("day")
+                  .fromNow()}
               </Text>
             </Stack>
 
@@ -1370,8 +1303,8 @@ function InquiryBox({
               <Typography
                 sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
               >
-                <span style={{ fontWeight: "bold" }}>{creditor_name} </span>-
-                {data.credit_bereau}
+                <span style={{ fontWeight: "bold" }}>{creditor_name}</span> -{" "}
+                {bureau}
               </Typography>
               <Typography
                 sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
@@ -1385,62 +1318,79 @@ function InquiryBox({
     </Box>
   );
 }
+
+
 function PersonalInfoBox({
-  bureau,
   personalInfo,
   infoIndex,
   onCheckboxChange,
   checkboxStates,
 }) {
   const { label, data } = personalInfo;
-  const isChecked =
-    checkboxStates?.personalInfo?.[bureau]?.[infoIndex] || false;
 
   return (
-      data[bureau] !== "-" ? (
-    <Box display="flex" flexDirection="row" marginBottom={2}>
-        <Box
-          border="1px solid #FF9D43"
-          borderRadius="10px"
-          padding={2}
-          width="300px"
-        >
-          <Stack spacing={1}>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
+    <>
+      {Object.entries(data).map(([bureau, value]) => {
+        const isChecked =
+          checkboxStates?.personalInfo?.[infoIndex]?.[bureau] || false;
+
+        return (
+          <Box key={bureau} display="flex" flexDirection="row" marginBottom={2}>
+            <Box
+              border="1px solid #FF9D43"
+              borderRadius="10px"
+              padding={2}
+              width="300px"
             >
-              <Checkbox
-                checked={isChecked}
-                onChange={() =>
-                  onCheckboxChange("personalInfo", infoIndex, bureau)
-                }
-                sx={{
-                  color: "#FF9D43",
-                  "&.Mui-checked": {
-                    color: "#FF9D43",
-                  },
-                }}
-              />
-              <Typography
-                sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
-              >
-                {label} -{" "}
-                <span style={{ fontWeight: "bold" }}>{data[bureau]}</span>
-              </Typography>
-              <Typography
-                sx={{ fontSize: "14px", fontWeight: "400", color: "#475467" }}
-              >
-                {bureau}
-              </Typography>
-            </Stack>
-          </Stack>
-        </Box>
-        </Box>
-      ) : null
+              <Stack spacing={1}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Checkbox
+                    checked={isChecked}
+                    onChange={() =>
+                      onCheckboxChange("personalInfo", infoIndex, bureau)
+                    }
+                    sx={{
+                      color: "#FF9D43",
+                      "&.Mui-checked": {
+                        color: "#FF9D43",
+                      },
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      fontSize: "14px",
+                      fontWeight: "400",
+                      color: "#475467",
+                    }}
+                  >
+                    {label} -{" "}
+                    <span style={{ fontWeight: "bold" }}>{value}</span>
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: "14px",
+                      fontWeight: "400",
+                      color: "#475467",
+                    }}
+                  >
+                    {bureau}
+                  </Typography>
+                </Stack>
+              </Stack>
+            </Box>
+          </Box>
+        );
+      })}
+    </>
   );
 }
+
+
+
 
 
 function RoundMenu({ user, attacking, setType }) {

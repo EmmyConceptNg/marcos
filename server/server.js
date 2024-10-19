@@ -59,6 +59,12 @@ dotenv.config({ path: envFile });
 
 // Serve static files from the "public/images" directory
 app.use("/images", express.static(path.join(__dirname, "public/images")));
+app.use("/public", express.static(path.join(process.cwd(), "public")));
+app.use(
+  "/public/records",
+  express.static(path.join(process.cwd(), "public/records"))
+);
+
 
 // Log incoming requests
 app.use((req, res, next) => {

@@ -49,7 +49,7 @@ export default function ReportModal({
   const handleClose = () => setOpen(false);
   const dispatch = useDispatch();
 
-  console.log(dataUrl);
+  // console.log(dataUrl);
 
   return (
     <>

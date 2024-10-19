@@ -23,6 +23,7 @@ import NoBalanceModal from "../../../components/modal/NoBalanceModal";
 import { setUser } from "../../../redux/UserReducer";
 import LetterModal from "../../../components/modal/LetterModal";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function DisputeCenters() {
   const [type, setType] = useState("disputing");
@@ -80,14 +81,16 @@ export default function DisputeCenters() {
 
     setAttacking(true);
     const selectedItems = compileSelectedItems();
+
+    console.log("Selected Items Payload:", selectedItems);
     try {
       const response = await axios.post("/api/letters", {
         selectedItems,
         userId: user._id,
       });
       dispatch(setUser(response.data.user));
-      notify("Success: Letters have been generated and sent!", "success");
-      setTimeout(() => setType("attacks"), 3000);
+      setTimeout(() => setType("attacks"), 1000);
+      // notify("Success: Letters have been generated and sent!", "success");
     } catch (error) {
       notify("Error: The attack could not be completed.", "error");
     } finally {
@@ -102,11 +105,14 @@ export default function DisputeCenters() {
       personalInfo,
       "personalInfo"
     );
+
     const selectedInquiries = {
-      EQF: filterSelectedInquiries("Equifax"),
-      EXP: filterSelectedInquiries("Experian"),
-      TUC: filterSelectedInquiries("TransUnion"),
+      EQF: filterSelectedInquiries("EQF"),
+      EXP: filterSelectedInquiries("EXP"),
+      TUC: filterSelectedInquiries("TUC"),
     };
+
+    console.log("Selected Inquiries:", selectedInquiries);
     return {
       disputes: selectedDisputes,
       accounts: selectedAccounts,
@@ -121,12 +127,29 @@ export default function DisputeCenters() {
         (bureau) => checkboxStates[type][index][bureau]
       )
     );
-  const filterSelectedInquiries = (bureau) =>
-    inquiries.filter(
-      (inquiry, index) =>
-        inquiry.data.credit_bereau === bureau &&
-        checkboxStates.inquiries[bureau][index]
+  const filterSelectedInquiries = (bureau) => {
+    const bureauNameMap = {
+      EQF: "Equifax",
+      EXP: "Experian",
+      TUC: "TransUnion",
+    };
+
+    const bureauName = bureauNameMap[bureau];
+    if (!checkboxStates.inquiries[bureau]) return [];
+
+    // Filter inquiries to only include those for the current bureau
+    const bureauInquiries = inquiries.filter(
+      (inquiry) => inquiry.data.credit_bereau === bureauName
     );
+
+    return bureauInquiries.filter((inquiry, index) => {
+      const isSelected = checkboxStates.inquiries[bureau][index];
+      console.log(
+        `Filtering ${bureauName} - Index: ${index}, Selected: ${isSelected}`
+      );
+      return isSelected;
+    });
+  };
 
   const isAnyCheckboxSelected = () =>
     ["disputes", "accounts", "personalInfo"].some((type) =>
@@ -222,7 +245,8 @@ const TabSelector = ({ type, setType, attacking }) => (
     >
       Disputing
     </TabButton>
-    <TabButton right={true}
+    <TabButton
+      right={true}
       active={type === "attacks"}
       onClick={() => !attacking && setType("attacks")}
     >
@@ -409,59 +433,65 @@ function Disputes({
   const user = useSelector((state) => state.user.details);
   const [customMessages, setCustomMessages] = useState({});
 
-   useEffect(() => {
-     const { negatives, messageState } = identifyNegativeItems(user);
-     const queries = queryAccount(user);
+  useEffect(() => {
+    if (!user?.creditReport[0]?.creditReportData) return;
 
-     setDisputes(negatives);
-     setAccounts(queries);
-     setCustomMessages(messageState);
+    const { negatives, messageState } = identifyNegativeItems(user);
+    const queries = queryAccount(user);
 
-     const userInquiries =
-       user?.creditReport[0]?.creditReportData?.inquiries || [];
-     setInquiries(userInquiries);
+    setDisputes(negatives);
+    setAccounts(queries);
+    setCustomMessages(messageState);
 
-     const userPersonalInfo =
-       user?.creditReport[0]?.creditReportData?.personal_information || [];
-     setPersonalInfo(userPersonalInfo);
+    const userInquiries =
+      user?.creditReport[0]?.creditReportData?.inquiries || [];
+    setInquiries(userInquiries);
 
-     const newCheckboxState = {
-       disputes: negatives.map(() => ({
-         EQF: false,
-         EXP: false,
-         TUC: false,
-       })),
-       accounts: queries.map(() => ({
-         EQF: false,
-         EXP: false,
-         TUC: false,
-       })),
-       inquiries: {
-         EQF: userInquiries
-           .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
-           .map(() => false),
-         EXP: userInquiries
-           .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
-           .map(() => false),
-         TUC: userInquiries
-           .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
-           .map(() => false),
-       },
-       personalInfo: userPersonalInfo.map(() => ({
-         EQF: false,
-         EXP: false,
-         TUC: false,
-       })),
-     };
+    const userPersonalInfo =
+      user.creditReport[0].creditReportData.personal_information || [];
+    setPersonalInfo(userPersonalInfo);
 
-     setCheckboxStates(newCheckboxState);
-   }, [user]);
+    const newCheckboxState = {
+      disputes: negatives.map(() => ({
+        EQF: false,
+        EXP: false,
+        TUC: false,
+      })),
+      accounts: queries.map(() => ({
+        EQF: false,
+        EXP: false,
+        TUC: false,
+      })),
+      inquiries: {
+        EQF: userInquiries
+          .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
+          .map(() => false),
+        EXP: userInquiries
+          .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
+          .map(() => false),
+        TUC: userInquiries
+          .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
+          .map(() => false),
+      },
+      personalInfo: userPersonalInfo.map(() => ({
+        EQF: false,
+        EXP: false,
+        TUC: false,
+      })),
+    };
+
+    setCheckboxStates((prevState) => ({
+      ...prevState,
+      ...newCheckboxState,
+    }));
+
+    console.log("Initialized Checkbox States:", newCheckboxState);
+  }, [user]);
 
   // Filter out personal info entries that have "-" for all bureaus
   const filteredPersonalInfo = personalInfo.filter((info) =>
     ["EQF", "EXP", "TUC"].some((bureau) => info.data[bureau] !== "-")
   );
-
 
   const handleSelectAllCheckbox = (type, checked) => {
     setCheckboxStates((prevState) => {
@@ -584,9 +614,9 @@ function Disputes({
       >
         {disputes.length > 0 && (
           <>
-          <Divider />
-          
-            <Box p={2} bgcolor="#FF9D43" mb={5} >
+            <Divider />
+
+            <Box p={2} bgcolor="#FF9D43" mb={5}>
               <Text fs="20px" fw="700" color="#131C30" mb={2}>
                 Public Information
               </Text>
@@ -811,10 +841,10 @@ function Disputes({
         {accounts.length > 0 && (
           <>
             <Box p={2} bgcolor="#FF9D43" mt={10} mb={5}>
-            <Text fs="20px" fw="700" color="#131C30" mb={2}>
-              Account History
-            </Text>
-          </Box>
+              <Text fs="20px" fw="700" color="#131C30" mb={2}>
+                Account History
+              </Text>
+            </Box>
             <Stack direction="row" spacing={2} alignItems="center">
               <Checkbox
                 onChange={(e) =>
@@ -970,6 +1000,7 @@ function Attacks({
   const [letterPath, setLetterPath] = useState("");
   const [openLetterModal, setOpenLetterModal] = useState(false);
   const [letterBureau, setLetterBureau] = useState("");
+  const [mailing, setMailing] = useState(false);
 
   const dispatch = useDispatch();
 
@@ -998,9 +1029,45 @@ function Attacks({
   };
 
   const handleMailLetters = () => {
+    setMailing(true);
+
     if (!user.balance || user.balance === 0) {
       setOpenNoBalance(true);
+      setMailing(false);
     }
+
+    Swal.fire({
+      title: "Mail Letter!!!",
+      text: "are ready to mail the letteres!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, Mail Out!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axios
+          .get(`/api/letters/mail-out/${user?._id}`)
+          .then((response) => {
+            dispatch(setUser(response.data.user));
+            Swal.fire({
+              title: "Mailed!",
+              text: "Document mailed successfully.",
+              icon: "success",
+            });
+          })
+          .catch((error) => {
+            Swal.fire({
+              title: "Error!",
+              text: error.response.data.error || "An error occured",
+              icon: "error",
+            });
+          })
+          .finally(() => {
+            setMailing(false);
+          });
+      }
+    });
   };
 
   const handleViewLetter = async (letterId) => {
@@ -1027,9 +1094,8 @@ function Attacks({
         })
         .then((response) => {
           dispatch(setUser(response.data.user));
+          setOpenLetterModal(false);
         });
-
-      setOpenLetterModal(false);
     } catch (error) {
       console.error("Error updating letter content:", error);
     }
@@ -1101,6 +1167,7 @@ function Attacks({
                   Download All
                 </Button>
                 <Button
+                  loading={mailing}
                   width="100%"
                   variant="contained"
                   onClick={handleMailLetters}
@@ -1319,7 +1386,6 @@ function InquiryBox({
   );
 }
 
-
 function PersonalInfoBox({
   personalInfo,
   infoIndex,
@@ -1388,10 +1454,6 @@ function PersonalInfoBox({
     </>
   );
 }
-
-
-
-
 
 function RoundMenu({ user, attacking, setType }) {
   return (

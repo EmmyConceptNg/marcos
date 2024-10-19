@@ -10,6 +10,7 @@ import { PDFDocument as PdfLibDocument, rgb } from "pdf-lib";
 import axios from "axios";
 import { htmlToText } from "html-to-text";
 import OpenAI from "openai";
+import Contact from "../models/Contact.js";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_SECRET,
@@ -35,6 +36,7 @@ export const createLetters = async (req, res) => {
   const {
     disputes = [],
     accounts = [],
+    personalInfo = [],
     inquiries = {},
   } = req.body.selectedItems;
   const { userId } = req.body;
@@ -56,6 +58,7 @@ export const createLetters = async (req, res) => {
         disputes,
         accounts,
         inquiries[bureauCode],
+        personalInfo,
         user
       );
 
@@ -87,6 +90,7 @@ async function generateLetterContent(
   disputes,
   accounts,
   inquiries,
+  personalInfo,
   user
 ) {
   const bureau = bureaus[bureauCode];
@@ -95,31 +99,23 @@ async function generateLetterContent(
 
   // Original content generation logic
   let content = `Generate a professional credit repair letter with the format below and if possible,
-  
-  Name: ${user.fullName}
-Address: ${user.presentAddress}
-DOB: ${user.dob ? new Date(user.dob).toLocaleDateString() : "N/A"}
-Last 4 of SSN: ${last4SSN}
-Date: ${new Date().toLocaleDateString()}
 
-Bureau Name: ${bureau.name}
-Bureau Address: ${bureau.address}
+  Dear ${bureau.name},
 
-Dear ${bureau.name},
+  I have recently conducted an investigation into my credit report and found several items to be inaccurate.
 
-I have recently conducted an investigation into my credit report and found several items to be inaccurate.
+  Under 15 U.S. Code 1681e (b) Accuracy of report. Whenever a consumer reporting agency prepares a consumer report, it shall follow reasonable procedures to assure the maximum possible accuracy of the information concerning the individual about whom the report relates.
 
-Under 15 U.S. Code 1681e (b) Accuracy of report. Whenever a consumer reporting agency prepares a consumer report, it shall follow reasonable procedures to assure the maximum possible accuracy of the information concerning the individual about whom the report relates.
+  15 U.S. Code 1681i (5) Treatment of inaccurate or unverifiable information(A). In general, if after any reinvestigation under paragraph (1) of any information disputed by a consumer, an item of the information is found to be inaccurate or incomplete or cannot be verified, the consumer reporting agency shall—(i) promptly delete that item of information from the file of the consumer, or modify that item of information, as appropriate, based on the results of the reinvestigation; and (ii) promptly notify the furnisher of that information that the information has been modified or deleted from the file of the consumer.
 
-15 U.S. Code 1681i (5) Treatment of inaccurate or unverifiable information(A). In general, if after any reinvestigation under paragraph (1) of any information disputed by a consumer, an item of the information is found to be inaccurate or incomplete or cannot be verified, the consumer reporting agency shall—(i) promptly delete that item of information from the file of the consumer, or modify that item of information, as appropriate, based on the results of the reinvestigation; and (ii) promptly notify the furnisher of that information that the information has been modified or deleted from the file of the consumer.
+  Please remove the following items from my credit report, immediately:
 
-Please remove the following items from my credit report, immediately:
+  Personal Information:
+  `;
 
-Personal Information:
-`;
-
-  const personalItems = disputes.filter((item) => item.type === "personal");
+  const personalItems = personalInfo;
   const accountItems = accounts;
+  const publicInfo = disputes;
   const inquiryItems = inquiries || [];
 
   // Personal Information
@@ -127,9 +123,9 @@ Personal Information:
     content += "None\n";
   } else {
     personalItems.forEach((item, index) => {
-      content += `${index + 1}. ${
-        item.details[bureauCode]
-      } - The personal information is incorrect - please remove this from my credit report immediately..\n`;
+      content += `${index + 1}. ${item.label} (${
+        item.data[bureauCode]
+      }) - The personal information is incorrect - please remove this from my credit report immediately..\n`;
     });
   }
 
@@ -143,6 +139,19 @@ Personal Information:
       content += `${index + 1}. ${
         item.accountName
       } - This account is being reported inaccurately, please remove this from my credit report immediately.\n`;
+    });
+  }
+
+  content += "Public Information:\n";
+
+  // Account Information
+  if (publicInfo.length === 0) {
+    content += "None\n";
+  } else {
+    publicInfo.forEach((item, index) => {
+      content += `${index + 1}. ${
+        item.infoType
+      } - This public information is being reported inaccurately, please remove this from my credit report immediately.\n`;
     });
   }
 
@@ -215,9 +224,12 @@ async function updateDatabaseWithLetterPathsAndContents(
       { new: true }
     )
       .populate("subscriptionPlan")
-      .populate("creditReport")
-      .populate("letters")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } },
+      })
       .populate("documents")
+      .populate("letters")
       .select("-password");
 
     res.status(200).json({
@@ -275,7 +287,6 @@ export const getLetterById = async (req, res) => {
     const content = letterPath.content;
     const filePath = letterPath.path;
 
-    
     const pdfBuffer = fs.readFileSync(filePath);
     const pdfBase64 = pdfBuffer.toString("base64");
 
@@ -299,15 +310,11 @@ export const updateLetterById = async (req, res) => {
       return res.status(404).json({ message: "Letter not found" });
     }
 
+    const _user = await User.findOne({ _id: userId }).populate("documents");
 
-    const _user = await User.findOne({_id : userId}).populate('documents');
-
-    if(!_user){
+    if (!_user) {
       return res.status(404).json({ message: "User not found" });
     }
-
-
-    
 
     const letterPath = letter.letterPaths.id(letterId);
     const fullPath = path.resolve(letterPath.path);
@@ -318,11 +325,16 @@ export const updateLetterById = async (req, res) => {
     letterPath.content = content;
     await letter.save();
 
-const user = await User.findOne({ _id: userId })
-  .populate("subscriptionPlan")
-  .populate("creditReport")
-  .populate("documents")
-  .populate("letters");
+    const user = await User.findOne({ _id: userId })
+      .populate("subscriptionPlan")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } },
+      })
+      .populate("documents")
+      .populate("letters")
+      .select("-password");
+
 
     res.json({ user, message: "Letter updated successfully" });
   } catch (error) {
@@ -415,14 +427,6 @@ async function generatePDF(filePath, htmlContent, documents, imageUrl) {
     }
   });
 }
-
-
-
-
-
-
-
-
 
 // Function to fetch image as bytes
 const fetchImageAsBytes = async (imageUrl) => {
@@ -539,46 +543,151 @@ export const notarizeLetter = async (req, res) => {
 };
 
 export const mailOutLetters = async (req, res) => {
-  const { userId, recipientEmail } = req.body;
+  try {
+    const letters = await Letters.findOne({ userId: req.params.userId });
+    const _user = await User.findById(req.params.userId);
+    if (!letters) {
+      return res.status(404).json({ message: "No letters found" });
+    }
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.ADMIN_MAIL,
-      pass: process.env.ADMIN_MAIL_PASS,
-    },
-  });
+    for (const lett of letters.letterPaths) {
+      const contact = await Contact.findOne({ companyName: lett.bureau });
+      console.log("contacts", contact);
+      const senderContact = await getOrCreateSenderContact(_user);
+      if (contact && senderContact) {
+        console.log("Creating letters");
+         const cleanPath = lett.path.replace(/^\./, "");
+          const pdfUrl = `${process.env.SERVER_URL}${cleanPath}`;
+        await axios.post(
+          `${process.env.POST_GRID}/letters`,
+          {
+            to: contact.id,
+            from: senderContact.id,
+            pdf: pdfUrl,
+          },
+          {
+            headers: { "x-api-key": process.env.POST_GRID_API_KEY },
+          }
+        );
 
-  const mailOptions = {
-    from: process.env.ADMIN_MAIL,
-    to: recipientEmail,
-    subject: "Your Dispute Letters",
-    text: "Please find attached the dispute letters.",
-    attachments: [],
-  };
+        console.log("Letters Sent");
 
-  const letters = await Letters.findOne({ userId });
-  if (letters && letters.letterPaths.length > 0) {
-    letters.letterPaths.forEach((letter) => {
-      mailOptions.attachments.push({
-        filename: `DisputeLetter_${letter.bureau}.pdf`,
-        path: letter.path,
-      });
-    });
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log(error);
-        res
-          .status(500)
-          .send({ error: "Error sending email: " + error.message });
-      } else {
-        console.log("Email sent: " + info.response);
-        res.status(200).send({ message: "Email sent successfully!" });
+        letters.send = true; // Correct assignment
       }
+    }
+
+    await letters.save(); // Save the parent document
+
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.userId },
+      { $inc: { balance: -process.env.MAIL_AMOUNT } }, // Decrement balance by 2
+      { new: true }
+    )
+      .populate("subscriptionPlan")
+      .populate({
+        path: "creditReport",
+        options: { sort: { createdAt: -1 } },
+      })
+      .populate("documents")
+      .populate("letters")
+      .select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ user, message: "Letters mailed successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+const getOrCreateSenderContact = async (user) => {
+  try {
+    const { data: allContacts } = await axios.get(
+      `${process.env.POST_GRID}/contacts`,
+      {
+        headers: { "x-api-key": process.env.POST_GRID_API_KEY },
+      }
+    );
+
+    // console.log("All Contacts in getting or creating", allContacts.data);
+
+    const findContact = allContacts.data.find(
+      (contact) =>
+        contact.firstName === user.fullName.split(" ")[0] &&
+        contact.lastName === user.fullName.split(" ")[1] &&
+        contact.addressLine1 === user.presentAddress &&
+        contact.addressLine2 === user.permAddress
+    );
+
+    if (!findContact) {
+      console.log("could no find contact.... creating ");
+
+      const { data: newContact } = await axios.post(
+        `${process.env.POST_GRID}/contacts`,
+        {
+          countryCode: "US",
+          firstName: user.fullName.split(" ")[0],
+          lastName: user.fullName.split(" ")[1],
+          addressLine1: user.presentAddress,
+          addressLine2: user.permAddress,
+        },
+        {
+          headers: { "x-api-key": process.env.POST_GRID_API_KEY },
+        }
+      );
+      console.log("Contact created", newContact);
+
+      return newContact;
+    } else {
+      console.log("Contact found", findContact);
+
+      return findContact;
+    }
+  } catch (error) {
+    console.error("Error in getOrCreateSenderContact:", error);
+    throw new Error("Failed to create or retrieve contact");
+  }
+};
+
+export const createMailContacts = (req, res) => {
+  const contacts = [
+    {
+      countryCode: "US",
+      city: "CHESTER",
+      addressLine1: "CONSUMER SOLUTIONS P.O. BOX 2000 CHESTER, PA 19022-2000",
+      companyName: "TransUnion",
+    },
+    {
+      countryCode: "US",
+      city: "ALLEN",
+      addressLine1: "DISPUTE DEPARTMENT P.O. BOX 9701 ALLEN, TX 75013",
+      companyName: "Experian",
+    },
+    {
+      countryCode: "US",
+      city: "ATLANTA",
+      addressLine1: "P.O. BOX 7404256. ATLANTA, GA 30374-0256",
+      companyName: "Equifax",
+    },
+  ];
+
+  try {
+    contacts.forEach((contact) => {
+      axios
+        .post(`${process.env.POST_GRID}/contacts`, contact, {
+          headers: { "x-api-key": process.env.POST_GRID_API_KEY },
+        })
+        .then(async (response) => {
+          await Contact.create(response.data);
+        });
     });
-  } else {
-    res.status(404).send({ error: "No letters found for this user." });
+    return res.status(200).json({ message: "Contact Addedd Successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error });
   }
 };
 
@@ -601,4 +710,3 @@ const convertToPlainText = (html) => {
   };
   return htmlToText(html, options);
 };
-

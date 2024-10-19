@@ -32,6 +32,7 @@ export const createCreditReport = async (req, res) => {
 
 export const uploadRecord = async (req, res) => {
   const filePath = req.file.path;
+  const fileName = req.file.originalname;
   const { userId } = req.params;
 
   // Check if the file exists
@@ -53,13 +54,18 @@ export const uploadRecord = async (req, res) => {
       if (result.status !== 200) {
         return res.status(result.status).json({ message: result.message });
       }
-      cleanUpTempFile(filePath);
+      // cleanUpTempFile(filePath);
       return res.status(200).json(result.data);
     } else if (req.file.mimetype === "application/pdf") {
       // Convert PDF to text and process
       const textContent = await convertPdfToText(filePath);
       if (textContent) {
-        result = await parsePdfAndStore(textContent, userId, filePath);
+        result = await parsePdfAndStore(
+          textContent,
+          userId,
+          filePath,
+          fileName
+        );
       } else {
         console.error("Invalid text content extracted from PDF");
         cleanUpTempFile(filePath);
@@ -67,7 +73,7 @@ export const uploadRecord = async (req, res) => {
           .status(500)
           .send("Error converting PDF file: Invalid content");
       }
-      cleanUpTempFile(filePath);
+      // cleanUpTempFile(filePath);
       if (result.status !== 200) {
         return res.status(result.status).json({ message: result.message });
       }
@@ -279,7 +285,7 @@ const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
   }
 };
 
-const parsePdfAndStore = async (pdfContent, userId, filePath) => {
+const parsePdfAndStore = async (pdfContent, userId, filePath, fileName) => {
   try {
     const creditReportData = await parsePdfText(pdfContent);
     console.log("storing", userId);
@@ -287,7 +293,10 @@ const parsePdfAndStore = async (pdfContent, userId, filePath) => {
     // Create a new credit report instance
     const newDocument = new CreditReport({
       creditReportData,
-      filePath,
+      filePath: `${process.env.SERVER_URL}/public/records/${fileName.replace(
+        /\\/g,
+        "/"
+      )}`,
       round: 1, // If you want the round value to start at 1
       userId,
     });

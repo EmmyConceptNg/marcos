@@ -18,7 +18,8 @@ const __dirname = path.dirname(__filename);
 // Set up multer storage
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
-    const imagesDir = path.join(__dirname, "public", "records");
+    // Use process.cwd() to get the root directory of your project
+    const imagesDir = path.join(process.cwd(), "public", "records");
 
     // Ensure the directory exists, if not create it
     if (!fs.existsSync(imagesDir)) {
@@ -52,11 +53,26 @@ const fileFilter = (req, file, callback) => {
 };
 
 // Set up multer upload
-const upload = multer({ storage: storage, fileFilter: fileFilter });
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+}).single("file");
 
 // Routes
 router.get("/creditreport", getCreditReport);
 router.post("/creditreport", createCreditReport);
-router.post("/upload/:userId", upload.single("file"), uploadRecord);
+// router.post("/upload/:userId", upload.single("file"), uploadRecord);
+router.post("/upload/:userId", upload, (req, res, next) => {
+  // Log file information to check if multer is receiving the file
+  console.log("File received: ", req.file);
+
+  if (!req.file) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  // If file is successfully uploaded, you can process it further
+  uploadRecord(req, res);
+});
+
 
 export default router;

@@ -351,7 +351,7 @@ async function generatePDF(filePath, htmlContent, documents, imageUrl) {
 
       pdfDoc.pipe(stream);
 
-      const textContent = htmlToText(`<div style="margin-top: 300px">${htmlContent}</div>`, {
+      const textContent = htmlToText(`<div style="margin-top: 500px">${htmlContent}</div>`, {
         wordwrap: 130,
       });
 

@@ -3,6 +3,7 @@ import {
   getCreditReport,
   createCreditReport,
   uploadRecord,
+  downloadCreditReport,
 } from "../controllers/CreditReportController.js";
 import multer from "multer";
 import fs from "fs";
@@ -61,6 +62,7 @@ const upload = multer({
 // Routes
 router.get("/creditreport", getCreditReport);
 router.post("/creditreport", createCreditReport);
+router.get("/download/:reportId", downloadCreditReport);
 // router.post("/upload/:userId", upload.single("file"), uploadRecord);
 router.post("/upload/:userId", upload, (req, res, next) => {
   // Log file information to check if multer is receiving the file

@@ -34,6 +34,7 @@ import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import ReportModal from "../../components/modal/ReportModal";
 import { hasID, hasProofOfAddress } from "../../utils/helper";
+import { Download } from "@mui/icons-material";
 
 export default function Documents() {
   const user = useSelector((state) => state.user.details);
@@ -47,6 +48,28 @@ export default function Documents() {
   const handleDocumetModal = () => {
     setOpenModal(true);
   };
+
+
+const handleDownload = async (id) => {
+  try {
+    const response = await axios({
+      url: `/api/creditreport/download/${id}`,
+      method: "GET",
+      responseType: "blob", // Important to handle binary data correctly
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "CreditReport.pdf"); // Set the filename
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error("Error during download:", error);
+  }
+};
+
 
   const fetchReport = async (filePath) => {
     try {
@@ -185,7 +208,6 @@ export default function Documents() {
                   "Report Date ",
                   "Report ID",
                   "Confirmation No.",
-                  "Receipt",
                   "Action",
                 ].map((item, index) => (
                   <TableCell key={index}>
@@ -243,31 +265,10 @@ export default function Documents() {
                     align="left"
                   >
                     <Box sx={{ cursor: "pointer" }}>
-                      <DocumentIcon />
+                      <Download onClick={() => handleDownload(row._id) }/>
                     </Box>
                   </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "15px",
-                      color: "#475467",
-                      fontWeight: "400",
-                    }}
-                    align="left"
-                  >
-                    <Stack direction="row" spacing={2}>
-                      <Box sx={{ cursor: "pointer" }}>
-                        <VisibilityIcon
-                          onClick={() => handleReportModal(row)}
-                        />
-                      </Box>
-                      {/* <Box
-                        sx={{ cursor: "pointer" }}
-                        onClick={handleUploadFromComputer}
-                      >
-                        <EditDocIcon />
-                      </Box> */}
-                    </Stack>
-                  </TableCell>
+                  
                 </TableRow>
               ))}
             </TableBody>

@@ -339,6 +339,41 @@ const cleanUpTempFile = (filePath) => {
 
 const toSnakeCase = (s) => s.toLowerCase().replace(/\s+/g, "_");
 
+
+export const downloadCreditReport = async (req, res) => {
+  const { reportId } = req.params;
+
+  try {
+    const report = await CreditReport.findById(reportId);
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" });
+    }
+
+    // Assuming filePath is a URL
+    const fileUrl = report.filePath;
+
+    // Fetch the file from the URL using axios
+    const fileResponse = await axios({
+      url: fileUrl,
+      method: "GET",
+      responseType: "stream", // Stream the file to handle large files efficiently
+    });
+
+    // Set the headers for file download
+    res.set({
+      "Content-Type": fileResponse.headers["content-type"],
+      "Content-Disposition": `attachment; filename=${fileUrl.split("/").pop()}`, // Extract filename from URL
+    });
+
+    // Pipe the file stream from axios response to the client
+    fileResponse.data.pipe(res);
+  } catch (error) {
+    console.error("Error while downloading report:", error);
+    res.status(500).json({ message: "Server error while downloading report" });
+  }
+};
+
 export default {
   getCreditReport,
   createCreditReport,

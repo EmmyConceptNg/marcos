@@ -50,7 +50,10 @@ export const uploadRecord = async (req, res) => {
     ) {
       // Read HTML file asynchronously using promises
       const data = await fs.promises.readFile(filePath, "utf8");
+      console.log('processing')
       result = await parseHtmlAndStore(data, userId, filePath);
+      console.log('done processing')
+
       if (result.status !== 200) {
         return res.status(result.status).json({ message: result.message });
       }
@@ -255,25 +258,31 @@ const parseHtmlAndStore = async (htmlContent, userId, filePath) => {
   });
 
   try {
-    const document = await CreditReport.findOneAndUpdate(
-      { _id: userId },
-      { $set: { creditReportData }, $inc: { round: 1 }, filePath },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    // Create a new credit report instance
+    const newDocument = new CreditReport({
+      creditReportData,
+      filePath,
+      round: 1,
+      userId,
+    });
 
+    // Save the new credit report
+    const document = await newDocument.save();
+
+    // Add the new credit report to the user's creditReport array
     const user = await User.findOneAndUpdate(
       { _id: userId },
-      { $push: { creditReport: document._id } }, // Use $push to add the new report to the array
+      { $push: { creditReport: document._id } },
       { new: true }
     )
       .populate("subscriptionPlan")
       .populate({
         path: "creditReport",
-        options: { sort: { createdAt: -1 } }, // Sort documents by createdAt in descending order
+        options: { sort: { createdAt: -1 } },
       })
       .populate({
         path: "documents",
-        options: { sort: { createdAt: -1 } }, // Sort documents by createdAt in descending order
+        options: { sort: { createdAt: -1 } },
       })
       .populate("letters")
       .select("-password");

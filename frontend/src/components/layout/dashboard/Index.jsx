@@ -12,20 +12,19 @@ import { Menu } from "@mui/icons-material";
 import { Outlet, useNavigate } from "react-router-dom";
 import Nav from "./Nav";
 import { Sidebar } from "./Sidebar";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Text from "../../Text";
+import { setupAxiosInterceptors } from "../../../api/axios";
 
 export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const navigate = useNavigate()
-  const user = useSelector(state => state.user)
+  const dispatch = useDispatch()
 
-  // useEffect(() => {
-  //   if(!user._id){
-  //     navigate('/login')
-  //   }
-  // },[user, navigate])
+  useEffect(() => {
+    setupAxiosInterceptors(dispatch, navigate);
+  }, [dispatch, navigate]);
 
   const handleDrawerClose = () => {
     setIsClosing(true);

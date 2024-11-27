@@ -67,6 +67,7 @@ export default function CreditReport() {
   }, [user]);
 
   const navigate = useNavigate()
+  const token = useSelector(state => state.user.token)
 
 
   const handleUploadFromComputer = () => {
@@ -103,6 +104,7 @@ export default function CreditReport() {
             .post(`/api/creditreport/upload/${user?._id}`, formData, {
               headers: {
                 "Content-Type": "multipart/form-data",
+                'Authorization' : 'Bearer ' + token
               },
             })
             .then((response) => {

@@ -306,8 +306,13 @@ const Loader = () => (
 );
 
 const queryAccount = (user) => {
-  const negative = [];
-  // Process account history for negative items
+  const categorizedAccounts = {
+    "Collection/Chargeoff": [],
+    Late: [],
+    Current: [],
+    Other: [],
+  };
+
   const accountHistory =
     user?.creditReport[0]?.creditReportData?.account_history || [];
   accountHistory.forEach((account) => {
@@ -317,25 +322,48 @@ const queryAccount = (user) => {
       TUC: {},
     };
 
-    let hasNegativeDetails = false;
+    let paymentStatus = "Other";
 
     account.accountDetails.forEach((detail) => {
-      // Check for negative indicators like "Collection" or "Chargeoff" in "Payment Status"
       if (detail.label === "Payment Status:") {
-        console.log("payment status ");
         const statuses = [detail.data.EQF, detail.data.EXP, detail.data.TUC];
         if (
-          statuses.some(
-            (status) =>
-              status.toLowerCase().includes("collection/chargeoff") ||
-              status.toLowerCase().includes("late")
+          statuses.some((status) =>
+            status.toLowerCase().includes("collection/chargeoff")
           )
         ) {
-          hasNegativeDetails = true;
+          paymentStatus = "Collection/Chargeoff";
+        } else if (
+          statuses.some((status) => status.toLowerCase().includes("late"))
+        ) {
+          paymentStatus = "Late";
+        } else if (
+          statuses.every((status) => status.toLowerCase().includes("current"))
+        ) {
+          paymentStatus = "Current";
+        } else if (
+          statuses.every((status) => status.toLowerCase().includes("Paid")) ||
+          statuses.every((status) => status.toLowerCase().includes("Pays")) ||
+          statuses.every((status) => status.toLowerCase().includes("Paying"))
+        ) {
+          paymentStatus = "Paying / Paid";
+        } else if (
+          statuses.every((status) =>
+            status.toLowerCase().includes("Wage Earner Plan")
+          )
+        ) {
+          paymentStatus = "Wage Earner Plan";
+        
+        } else if (
+          statuses.every((status) =>
+            status.toLowerCase().includes("repossession")
+          )
+        ) {
+          paymentStatus = "Repossession";
         }
+        
       }
 
-      // Aggregate details by bureau
       if (detail.data.EQF)
         structuredAccountDetails.EQF[detail.label] = detail.data.EQF;
       if (detail.data.EXP)
@@ -344,16 +372,15 @@ const queryAccount = (user) => {
         structuredAccountDetails.TUC[detail.label] = detail.data.TUC;
     });
 
-    // If negative details are found, add this account to the negatives array
-    if (hasNegativeDetails) {
-      negative.push({
-        accountName: account.accountName,
-        details: flattenDetails(structuredAccountDetails),
-      });
-    }
+    categorizedAccounts[paymentStatus].push({
+      accountName: account.accountName,
+      details: flattenDetails(structuredAccountDetails),
+    });
   });
-  return negative;
+
+  return categorizedAccounts;
 };
+
 
 const identifyNegativeItems = (user) => {
   const negatives = [];
@@ -433,60 +460,89 @@ function Disputes({
   const user = useSelector((state) => state.user.details);
   const [customMessages, setCustomMessages] = useState({});
 
-  useEffect(() => {
-    if (!user?.creditReport[0]?.creditReportData) return;
+useEffect(() => {
+  if (!user?.creditReport[0]?.creditReportData) return;
 
-    const { negatives, messageState } = identifyNegativeItems(user);
-    const queries = queryAccount(user);
+  const { negatives, messageState } = identifyNegativeItems(user);
+  const accountHistory =
+    user?.creditReport[0]?.creditReportData?.account_history || [];
+  const categorizedAccounts = queryAccount(user);
 
-    setDisputes(negatives);
-    setAccounts(queries);
-    setCustomMessages(messageState);
+  setDisputes(negatives);
+  setAccounts(categorizedAccounts);
+  setCustomMessages(messageState);
 
-    const userInquiries =
-      user?.creditReport[0]?.creditReportData?.inquiries || [];
-    setInquiries(userInquiries);
+  // Filter inquiries based on account history conditions
+  const userInquiries =
+    user?.creditReport[0]?.creditReportData?.inquiries || [];
+  const filteredInquiries = userInquiries.filter((inquiry) => {
+    const creditorName = inquiry.creditor_name;
+    console.log("Checking inquiry for creditor:", creditorName);
+    return !accountHistory.some((account) => {
+      if (account.accountName.toLowerCase() === creditorName.toLowerCase()) {
+        console.log("Matching account found:", account.accountName);
+        return account.accountDetails.some((detail) => {
+          if (detail.label === "Account Status:") {
+            console.log("Account Status for", creditorName, ":", detail.data);
+            return ["EQF", "EXP", "TUC"].every(
+              (bureau) => detail.data[bureau]?.toLowerCase() === "open"
+            );
+          }
+          return false;
+        });
+      }
+      return false;
+    });
+  });
 
-    const userPersonalInfo =
-      user.creditReport[0].creditReportData.personal_information || [];
-    setPersonalInfo(userPersonalInfo);
+  setInquiries(filteredInquiries);
 
-    const newCheckboxState = {
-      disputes: negatives.map(() => ({
+  const userPersonalInfo =
+    user.creditReport[0].creditReportData.personal_information || [];
+  setPersonalInfo(userPersonalInfo);
+
+  const newCheckboxState = {
+    disputes: negatives.map(() => ({
+      EQF: false,
+      EXP: false,
+      TUC: false,
+    })),
+    accounts: Object.keys(categorizedAccounts).reduce((acc, status) => {
+      acc[status] = categorizedAccounts[status].map(() => ({
         EQF: false,
         EXP: false,
         TUC: false,
-      })),
-      accounts: queries.map(() => ({
-        EQF: false,
-        EXP: false,
-        TUC: false,
-      })),
-      inquiries: {
-        EQF: userInquiries
-          .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
-          .map(() => false),
-        EXP: userInquiries
-          .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
-          .map(() => false),
-        TUC: userInquiries
-          .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
-          .map(() => false),
-      },
-      personalInfo: userPersonalInfo.map(() => ({
-        EQF: false,
-        EXP: false,
-        TUC: false,
-      })),
-    };
+      }));
+      return acc;
+    }, {}),
+    inquiries: {
+      EQF: filteredInquiries
+        .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
+        .map(() => false),
+      EXP: filteredInquiries
+        .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
+        .map(() => false),
+      TUC: filteredInquiries
+        .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
+        .map(() => false),
+    },
+    personalInfo: userPersonalInfo.map(() => ({
+      EQF: false,
+      EXP: false,
+      TUC: false,
+    })),
+  };
 
-    setCheckboxStates((prevState) => ({
-      ...prevState,
-      ...newCheckboxState,
-    }));
+  setCheckboxStates((prevState) => ({
+    ...prevState,
+    ...newCheckboxState,
+  }));
 
-    console.log("Initialized Checkbox States:", newCheckboxState);
-  }, [user]);
+  console.log("Initialized Checkbox States:", newCheckboxState);
+}, [user]);
+
+
+
 
   // Filter out personal info entries that have "-" for all bureaus
   const filteredPersonalInfo = personalInfo.filter((info) =>
@@ -593,6 +649,16 @@ function Disputes({
               </Text>
             </Box>
             {filteredPersonalInfo.map((info, infoIndex) => {
+              // Check if the info label is one of the specified labels
+              const displayLabels = [
+                "Name:",
+                "Date of Birth:",
+                "Current Address(es):",
+              ];
+              if (!displayLabels.includes(info.label)) {
+                return null; // Skip rendering if the label is not in the display list
+              }
+
               return (
                 <Stack direction="row" spacing={2} key={infoIndex}>
                   <PersonalInfoBox
@@ -607,6 +673,7 @@ function Disputes({
           </>
         )}
       </Stack>
+
       <Stack
         direction="column"
         spacing={{ sm: 4, xs: 1 }}
@@ -930,48 +997,65 @@ function Disputes({
             </Stack>
           </>
         )}
-        {accounts.map((account, infoIndex) => (
-          <Box key={infoIndex} sx={{ mb: 4 }}>
-            <Text fs="20px" fw="550" color="#131C30" mb={2}>
-              {account.accountName || account.infoType}
-            </Text>
-            <Stack direction="row" spacing={2}>
-              {account.details.EQF?.length > 0 && (
-                <AccountDetails
-                  bureau="EQF"
-                  details={account.details.EQF || []} // Ensure details are always an array
-                  infoIndex={infoIndex}
-                  onCheckboxChange={handleCheckboxChange} // Pass this function
-                  checkboxStates={checkboxStates}
-                  customMessage={customMessages[infoIndex]}
-                  onCustomMessageChange={handleCustomMessageChange}
-                />
-              )}
-              {account.details.EXP?.length > 0 && (
-                <AccountDetails
-                  bureau="EXP"
-                  details={account.details.EXP || []} // Ensure details are always an array
-                  infoIndex={infoIndex}
-                  onCheckboxChange={handleCheckboxChange} // Pass this function
-                  checkboxStates={checkboxStates}
-                  customMessage={customMessages[infoIndex]}
-                  onCustomMessageChange={handleCustomMessageChange}
-                />
-              )}
-              {account.details.TUC?.length > 0 && (
-                <AccountDetails
-                  bureau="TUC"
-                  details={account.details.TUC || []} // Ensure details are always an array
-                  infoIndex={infoIndex}
-                  onCheckboxChange={handleCheckboxChange} // Pass this function
-                  checkboxStates={checkboxStates}
-                  customMessage={customMessages[infoIndex]}
-                  onCustomMessageChange={handleCustomMessageChange}
-                />
-              )}
-            </Stack>
-          </Box>
-        ))}
+        {Object.entries(accounts).map(
+          ([status, accountList]) =>
+            accountList.length > 0 && (
+              <Stack
+                key={status}
+                direction="column"
+                spacing={4}
+                sx={{ overflow: "hidden", overflowX: "auto" }}
+              >
+                <Box p={2} bgcolor="#FF9D43" mt={10} mb={5}>
+                  <Text fs="20px" fw="700" color="#131C30" mb={2}>
+                    {status} Accounts
+                  </Text>
+                </Box>
+                {accountList.map((account, infoIndex) => (
+                  <Box key={infoIndex} sx={{ mb: 4 }}>
+                    <Text fs="20px" fw="550" color="#131C30" mb={2}>
+                      {account.accountName || account.infoType}
+                    </Text>
+                    <Stack direction="row" spacing={2}>
+                      {account.details.EQF?.length > 0 && (
+                        <AccountDetails
+                          bureau="EQF"
+                          details={account.details.EQF || []}
+                          infoIndex={infoIndex}
+                          onCheckboxChange={handleCheckboxChange}
+                          checkboxStates={checkboxStates}
+                          customMessage={customMessages[infoIndex]}
+                          onCustomMessageChange={handleCustomMessageChange}
+                        />
+                      )}
+                      {account.details.EXP?.length > 0 && (
+                        <AccountDetails
+                          bureau="EXP"
+                          details={account.details.EXP || []}
+                          infoIndex={infoIndex}
+                          onCheckboxChange={handleCheckboxChange}
+                          checkboxStates={checkboxStates}
+                          customMessage={customMessages[infoIndex]}
+                          onCustomMessageChange={handleCustomMessageChange}
+                        />
+                      )}
+                      {account.details.TUC?.length > 0 && (
+                        <AccountDetails
+                          bureau="TUC"
+                          details={account.details.TUC || []}
+                          infoIndex={infoIndex}
+                          onCheckboxChange={handleCheckboxChange}
+                          checkboxStates={checkboxStates}
+                          customMessage={customMessages[infoIndex]}
+                          onCustomMessageChange={handleCustomMessageChange}
+                        />
+                      )}
+                    </Stack>
+                  </Box>
+                ))}
+              </Stack>
+            )
+        )}
       </Stack>
       <Box sx={{ mt: 3 }}>
         <Button
@@ -1254,6 +1338,7 @@ function BureauDetails({
                 padding: "10px",
                 marginLeft: "10px",
                 borderRadius: "5px",
+                background: "#fff",
                 border: "1px solid #CDCDCD",
               }}
             />
@@ -1322,6 +1407,7 @@ function AccountDetails({
                 marginLeft: "10px",
                 borderRadius: "5px",
                 border: "1px solid #CDCDCD",
+                background: "#fff",
               }}
             />
           </Stack>
@@ -1393,6 +1479,14 @@ function PersonalInfoBox({
   checkboxStates,
 }) {
   const { label, data } = personalInfo;
+
+  // Define the labels you want to display
+  const displayLabels = ["Name:", "Date of Birth:", "Current Address(es):"];
+
+  // Check if the current label should be displayed
+  if (!displayLabels.includes(label)) {
+    return null; // Return null if the label is not in the display list
+  }
 
   return (
     <>

@@ -43,7 +43,7 @@ export const login = async (req, res) => {
     },
     process.env.JWTSECRET,
     {
-      expiresIn: "1h",
+      expiresIn: "12h",
     }
   );
   delete user.password;
@@ -54,7 +54,7 @@ export const login = async (req, res) => {
     })
     .status(200)
     .json({
-      user,
+      user, token
     });
 };
 export const loginGoogle = async (req, res) => {
@@ -98,7 +98,7 @@ export const loginGoogle = async (req, res) => {
         secure: process.env.NODE_ENV === "production", // Set secure to true if in production (uses HTTPS)
       })
       .status(200)
-      .json({ user });
+      .json({ user, token });
   } catch (error) {
     console.error("Error during Google login:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -149,8 +149,17 @@ export const register = async (req, res) => {
       .select("-password");
 
     if (createUser) {
+      const token = jwt.sign(
+        {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+        },
+        process.env.JWTSECRET,
+        { expiresIn: "1h" }
+      );
       sendMail(detail.email, "Verify Account", html(populatedUser));
-      res.status(201).json({ user: populatedUser });
+      res.status(201).json({ user: populatedUser, token });
     }
   } catch (error) {
     res.status(500).json({ error: error });

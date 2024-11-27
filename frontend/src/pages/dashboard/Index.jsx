@@ -46,6 +46,7 @@ function Overview() {
   const user = useSelector((state) => state.user.details);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [linkToken, setLinkToken] = useState(null);
+  const token = useSelector(state => state.user.token)
   
   const [itemId, setItemId] = useState(null);
   const [proPlan, setProPlan] = useState(null);
@@ -53,7 +54,9 @@ function Overview() {
   const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
   const getPlans = () => {
-    axios.get("/api/subscription/get-plans").then((response) => {
+    axios.get("/api/subscription/get-plans", {headers: {
+      'Authorization' : 'Bearer ' + token
+    }}).then((response) => {
       const plans = response.data;
       console.log(plans);
       setProPlan(plans.find((plan) => plan.name === "Pro"));
@@ -68,7 +71,15 @@ function Overview() {
   const handleUpgrade = () => {
     setIsUpgrading(true);
     axios
-      .post("/api/subscription/initialize", { planId: proPlan?._id })
+      .post(
+        "/api/subscription/initialize",
+        { planId: proPlan?._id },
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+          },
+        }
+      )
       .then(async (response) => {
         setIsUpgrading(true);
         const stripe = await stripePromise;
@@ -189,6 +200,7 @@ function Disputes() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const user = useSelector((state) => state.user.details);
+  const token = useSelector((state) => state.user.token);
  
 
   const handleUploadFromComputer = () => {
@@ -225,6 +237,7 @@ function Disputes() {
             .post(`/api/creditreport/upload/${user?._id}`, formData, {
               headers: {
                 "Content-Type": "multipart/form-data",
+                'Authorization' : 'Bearer ' + token
               },
             })
             .then((response) => {

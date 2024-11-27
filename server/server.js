@@ -13,6 +13,7 @@ import reportRoutes from "./routes/CreditReport.js";
 import lettersRoutes from "./routes/Letters.js";
 import utilsRoutes from "./routes/Utils.js";
 import plaidController from "./routes/Plaid.js";
+import clientController from "./routes/Client.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -80,6 +81,7 @@ app.use("/api/creditreport", reportRoutes);
 app.use("/api/letters", lettersRoutes);
 app.use("/api/utils", utilsRoutes);
 app.use("/api/plaid", plaidController);
+app.use("/api/clients", clientController);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

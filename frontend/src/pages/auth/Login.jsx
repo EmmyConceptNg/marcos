@@ -12,7 +12,7 @@ import Text from "../../components/Text";
 import { notify } from "../../utils/Index";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
-import { setUser } from "../../redux/UserReducer";
+import { setToken, setUser } from "../../redux/UserReducer";
 import { Form, Formik } from "formik";
 import { loginValidation } from "../../utils/validation";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -43,11 +43,19 @@ export default function Login() {
       .then((response) => {
         console.log(response.data.user);
         dispatch(setUser(response.data.user));
+        dispatch(setToken(response.data.token));
 
         if (response.data.user.emailVerified === false) {
           navigate("/verification/link/email");
         } else {
-          navigate("/dashboard");
+
+          if (response.data.user.subscriptionPlan.name == "Enterprise"){
+            navigate("/business");
+
+          }else{
+
+            navigate("/dashboard");
+          }
           //  const lastUrl = localStorage.getItem("lastUrl");
           // if (lastUrl) {
           //   navigate(lastUrl);
@@ -66,7 +74,28 @@ export default function Login() {
 
    const handleLoginGoogle = (values, actions) => {
      actions.setSubmitting(true);
-     navigate("/dashboard");
+     axios
+       .post("/api/auth/login/google", values, {
+         headers: { "Content-Type": "application/json" },
+       })
+       .then((response) => {
+         console.log(response.data.user);
+         dispatch(setUser(response.data.user));
+         dispatch(setToken(response.data.token));
+
+        
+           if (response.data.user.subscriptionPlan.name == "Enterprise") {
+             navigate("/business");
+           } else {
+             navigate("/dashboard");
+           }
+           
+       })
+       .catch((error) => {
+         console.log(error);
+         notify(error?.response?.data?.error, "error");
+       })
+       .finally(() => actions.setSubmitting(false));
    };
 
    const [googleUser, setGoogleUser] = useState([]);

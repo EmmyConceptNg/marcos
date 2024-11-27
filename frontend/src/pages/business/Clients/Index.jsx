@@ -16,145 +16,189 @@ import {
   TableRow,
 } from "@mui/material";
 import UserIcon from "../../../components/svgs/UserIcon";
-import { ArrowDownward, ArrowUpward, FilterList, MoreVert } from "@mui/icons-material";
+import {
+  ArrowDownward,
+  ArrowUpward,
+  FilterList,
+  MoreVert,
+} from "@mui/icons-material";
 import Text from "../../../components/Text";
 import { Helmet } from "react-helmet";
 import DesktopIcon from "../../../components/svgs/DesktopIcon";
 import SearchInput from "../../../components/Search";
 import EditDocIcon from "../../../components/svgs/EditDocIcon";
 import DeleteIcon from "../../../components/svgs/DeleteIcon";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import User2Icon from "../../../components/svgs/User2Icon";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import Button from "../../../components/Button";
+import AddClientModal from "./Add/Index";
+import axios from "../../../api/axios";
+import { notify } from "../../../utils/Index";
 
 export default function Clients() {
+  const [addUserModal, setAddUserModal] = useState(false);
+  const [clients, setClients] = useState([]);
+  const user = useSelector((state) => state.user.details);
+
+  const handleAddUser = () => {
+    console.log("here");
+    setAddUserModal(true);
+  };
+
+  useEffect(() => {
+    axios
+      .get(`/api/clients/${user?._id}`, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then((response) => {
+        setClients(response.data.clients);
+      })
+      .catch((error) => {
+        console.log(error);
+        notify(error?.response?.data?.error, "error");
+      });
+  }, []);
+
   return (
-    <Box>
-      <Helmet>
-        <title>Clients</title>
-      </Helmet>
-      <Stack spacing={4}>
-        <Grid container spacing={2} justifyContent="space-between">
-          {[
-            {
-              name: "Total customers",
-              count: "2,420",
-              percentage: "20",
-              icon: <UserIcon />,
-            },
-            {
-              name: "Members",
-              count: "1,210",
-              percentage: "15",
-              icon: <UserIcon />,
-            },
-            {
-              name: "Active now",
-              count: "316",
-              members: ["", "", "", "", ""],
-              icon: <DesktopIcon />,
-            },
-          ].map((item, index) => (
-            <Grid lg={4} md={6} sm={6} xs={12} item key={index}>
-              <Box
-                width="100%"
-                sx={{ boxShadow: "0px 4px 20px 0px #1018281A" }}
-                px={3}
-                py={2}
-                display="flex"
-                flexDirection="column"
-                justifyContent="space-between"
-                borderRadius="15px"
-                height="192px"
+    <>
+      <AddClientModal open={addUserModal} setOpen={setAddUserModal} />
+
+      <Box>
+        <Helmet>
+          <title>Clients</title>
+        </Helmet>
+        <Stack spacing={4}>
+          <Grid container spacing={2} justifyContent="space-between">
+            {[
+              {
+                name: "Total customers",
+                count: "2,420",
+                percentage: "20",
+                icon: <UserIcon />,
+              },
+              {
+                name: "Members",
+                count: "1,210",
+                percentage: "15",
+                icon: <UserIcon />,
+              },
+              {
+                name: "Active now",
+                count: "316",
+                members: ["", "", "", "", ""],
+                icon: <DesktopIcon />,
+              },
+            ].map((item, index) => (
+              <Grid lg={4} md={6} sm={6} xs={12} item key={index}>
+                <Box
+                  width="100%"
+                  sx={{ boxShadow: "0px 4px 20px 0px #1018281A" }}
+                  px={3}
+                  py={2}
+                  display="flex"
+                  flexDirection="column"
+                  justifyContent="space-between"
+                  borderRadius="15px"
+                  height="192px"
+                  bgcolor="#fff"
+                >
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <IconButton>{item.icon}</IconButton>
+                    <IconButton>
+                      <MoreVert sx={{ color: "#98A2B3" }} />
+                    </IconButton>
+                  </Stack>
+
+                  <Stack>
+                    <Text color="#131C30" fw="550" fs="14px">
+                      {item.name}
+                    </Text>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Text color="#475467" fw="550" fs="36px">
+                        {item.count}
+                      </Text>
+                      {item?.percentage ? (
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="center"
+                          sx={{ p: 2 }}
+                          height="24px"
+                          bgcolor="#ECFDF3"
+                          borderRadius="16px"
+                          spacing={1}
+                        >
+                          <ArrowUpward
+                            sx={{ color: "#12B76A", fontSize: "15px" }}
+                          />
+                          <Text color="#027A48" fs="14px" fw="500">
+                            {item.percentage}%
+                          </Text>
+                        </Stack>
+                      ) : (
+                        <AvatarGroup max={5}>
+                          {item.members.map((item) => (
+                            <Avatar
+                              key={item}
+                              alt="Remy Sharp"
+                              src="/assets/images/avatar.svg"
+                            />
+                          ))}
+                        </AvatarGroup>
+                      )}
+                    </Stack>
+                  </Stack>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Box px={2}>
+            <Stack direction="row" spacing={2} justifyContent="space-between">
+              <SearchInput
+                width="320px"
+                height="50px"
+                placeholder="Search"
                 bgcolor="#fff"
-              >
+              />
+
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained"
+                  onClick={() => handleAddUser()}
+                  width={{ sm: "165px", xs: "100%" }}
+                >
+                  Add Client
+                </Button>
                 <Stack
                   direction="row"
-                  justifyContent="space-between"
+                  spacing={2}
+                  sx={{ px: 3, backgroundColor: "#fff" }}
+                  justifyContent="center"
                   alignItems="center"
                 >
-                  <IconButton>{item.icon}</IconButton>
-                  <IconButton>
-                    <MoreVert sx={{ color: "#98A2B3" }} />
-                  </IconButton>
-                </Stack>
-
-                <Stack>
-                  <Text color="#131C30" fw="550" fs="14px">
-                    {item.name}
+                  <FilterList />
+                  <Text fs="14px" fw="550" color="#475467" sx={{ mb: 0 }}>
+                    Filters
                   </Text>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Text color="#475467" fw="550" fs="36px">
-                      {item.count}
-                    </Text>
-                    {item?.percentage ? (
-                      <Stack
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="center"
-                        sx={{ p: 2 }}
-                        height="24px"
-                        bgcolor="#ECFDF3"
-                        borderRadius="16px"
-                        spacing={1}
-                      >
-                        <ArrowUpward
-                          sx={{ color: "#12B76A", fontSize: "15px" }}
-                        />
-                        <Text color="#027A48" fs="14px" fw="500">
-                          {item.percentage}%
-                        </Text>
-                      </Stack>
-                    ) : (
-                      <AvatarGroup max={5}>
-                        {item.members.map((item) => (
-                          <Avatar
-                            key={item}
-                            alt="Remy Sharp"
-                            src="/assets/images/avatar.svg"
-                          />
-                        ))}
-                      </AvatarGroup>
-                    )}
-                  </Stack>
                 </Stack>
-              </Box>
-            </Grid>
-          ))}
-        </Grid>
-
-        <Box px={2}>
-          <Stack direction="row" spacing={2} justifyContent="space-between">
-            <SearchInput
-              width="320px"
-              height="50px"
-              placeholder="Search"
-              bgcolor="#fff"
-            />
-
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{ px: 3, backgroundColor: "#fff" }}
-              justifyContent="center"
-              alignItems="center"
-            >
-              <FilterList />
-              <Text fs="14px" fw="550" color="#475467" sx={{ mb: 0 }}>
-                Filters
-              </Text>
+              </Stack>
             </Stack>
-          </Stack>
-        </Box>
-        <DataTable />
-      </Stack>
-    </Box>
+          </Box>
+          <DataTable clients={clients} />
+        </Stack>
+      </Box>
+    </>
   );
 }
 
-function DataTable() {
-
+function DataTable({clients}) {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.details);
   const [checked, setChecked] = useState([true, false]);
@@ -167,7 +211,6 @@ function DataTable() {
     updatedChecked[index] = event.target.checked;
     setChecked(updatedChecked);
   };
-
 
   const colors = [
     {
@@ -192,38 +235,38 @@ function DataTable() {
     },
   ];
 
-
   const rows = [
     {
       name: "James D.",
       rating: {
         progress: 60,
-        percentage: 5, positive : true
+        percentage: 5,
+        positive: true,
       },
       lastContacted: "22 Jan 2022",
-      categories : [
-        {id : 'active', name : 'Active'},
-        {id : 'customerData', name : 'Customer Data'},
-        {id : 'admin', name : 'Admin'},
-        {id : 'more', name : '+4'}
-      ]
+      categories: [
+        { id: "active", name: "Active" },
+        { id: "customerData", name: "Customer Data" },
+        { id: "admin", name: "Admin" },
+        { id: "more", name: "+4" },
+      ],
     },
     {
       name: "James D.",
       rating: {
         progress: 60,
-        percentage: 5, positive :false
+        percentage: 5,
+        positive: false,
       },
       lastContacted: "22 Jan 2022",
-      categories : [
-        {id : 'active', name : 'Active'},
-        {id : 'customerData', name : 'Customer Data'},
-        {id : 'admin', name : 'Admin'},
-        {id : 'more', name : '+4'}
-      ]
+      categories: [
+        { id: "active", name: "Active" },
+        { id: "customerData", name: "Customer Data" },
+        { id: "admin", name: "Admin" },
+        { id: "more", name: "+4" },
+      ],
     },
   ];
-
 
   return (
     <TableContainer sx={{ bgcolor: "#fff", px: 2, borderRadius: "12px" }}>
@@ -261,7 +304,7 @@ function DataTable() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.map((row, index) => (
+          {clients?.map((row, index) => (
             <TableRow
               key={index}
               sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
@@ -303,7 +346,7 @@ function DataTable() {
               >
                 <Stack direction="row" spacing={2} alignItems="center">
                   <User2Icon />
-                  <Box>{row.name}</Box>
+                  <Box>{row.fullName || row.username}</Box>
                 </Stack>
               </TableCell>
               <TableCell
@@ -318,7 +361,7 @@ function DataTable() {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <LinearProgress
                     variant="determinate"
-                    value={row.rating.progress}
+                    value={row?.rating?.progress}
                     sx={{
                       height: "8px",
                       borderRadius: "5px",
@@ -330,7 +373,7 @@ function DataTable() {
                   />
 
                   <Text fs="14px" fw="550" color="#344054">
-                    {row.rating.progress}
+                    {row?.rating?.progress}
                   </Text>
                   <Stack
                     direction="row"
@@ -338,11 +381,11 @@ function DataTable() {
                     justifyContent="center"
                     sx={{ p: 2 }}
                     height="22px"
-                    bgcolor={row.rating.positive ? "#ECFDF3" : "#FEF3F2"}
+                    bgcolor={row?.rating?.positive ? "#ECFDF3" : "#FEF3F2"}
                     borderRadius="16px"
                     spacing={1}
                   >
-                    {row.rating.positive ? (
+                    {row?.rating?.positive ? (
                       <ArrowUpward
                         sx={{ color: "#12B76A", fontSize: "15px" }}
                       />
@@ -352,11 +395,11 @@ function DataTable() {
                       />
                     )}
                     <Text
-                      color={row.rating.positive ? "#027A48" : "#F04438"}
+                      color={row?.rating?.positive ? "#027A48" : "#F04438"}
                       fs="14px"
                       fw="500"
                     >
-                      {row.rating.percentage}%
+                      {row?.rating?.percentage}%
                     </Text>
                   </Stack>
                 </Stack>
@@ -365,14 +408,14 @@ function DataTable() {
                 sx={{ fontSize: "15px", color: "#475467", fontWeight: "400" }}
                 align="left"
               >
-                {row.lastContacted}
+                {row?.lastContacted}
               </TableCell>
               <TableCell
                 sx={{ fontSize: "15px", color: "#475467", fontWeight: "400" }}
                 align="left"
               >
                 <Stack direction="row" spacing={1}>
-                  {row.categories.map((item) => {
+                  {row?.categories?.map((item) => {
                     const color = colors.find((color) => color.id === item.id);
                     return (
                       <Stack
@@ -411,7 +454,7 @@ function DataTable() {
                     <DeleteIcon />
                   </IconButton>
 
-                  <IconButton onClick={()=>navigate(`${user._id}/edit`)}>
+                  <IconButton onClick={() => navigate(`${user._id}/edit`)}>
                     <EditDocIcon />
                   </IconButton>
                 </Stack>

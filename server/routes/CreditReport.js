@@ -65,7 +65,7 @@ router.get("/creditreport", authenticateToken, getCreditReport);
 router.post("/creditreport", authenticateToken, createCreditReport);
 router.get("/download/:reportId", authenticateToken, downloadCreditReport);
 // router.post("/upload/:userId", upload.single("file"), uploadRecord);
-router.post("/upload/:userId", authenticateToken, upload, (req, res, next) => {
+router.post("/upload/:userId", upload, (req, res, next) => {
   // Log file information to check if multer is receiving the file
   console.log("File received: ", req.file);
 

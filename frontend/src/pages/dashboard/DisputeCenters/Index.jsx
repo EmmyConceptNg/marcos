@@ -33,7 +33,12 @@ export default function DisputeCenters() {
   const [inquiries, setInquiries] = useState([]);
   const [personalInfo, setPersonalInfo] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [checkboxStates, setCheckboxStates] = useState({});
+  const [checkboxStates, setCheckboxStates] = useState({
+    disputes: {},
+    accounts: {},
+    inquiries: { EQF: [], EXP: [], TUC: [] },
+    personalInfo: {},
+  });
   const [showLoader, setShowLoader] = useState(attacking);
   const [openNoBalance, setOpenNoBalance] = useState(false);
 
@@ -59,7 +64,6 @@ export default function DisputeCenters() {
         amount: import.meta.env.VITE_ROUNDS_AMOUNT,
       });
       dispatch(setUser(response.data.user));
-      setType("disputing");
       return true;
     } catch (error) {
       notify("Failed to start a new round. Please try again.", "error");
@@ -77,89 +81,138 @@ export default function DisputeCenters() {
       notify("Error: No items selected for the attack.", "error");
       return;
     }
-    if (!(await handleStartNewRound())) return;
 
     setAttacking(true);
-    const selectedItems = compileSelectedItems();
-
-    console.log("Selected Items Payload:", selectedItems);
     try {
+      // Deduct balance first
+      if (!(await handleStartNewRound())) {
+        setAttacking(false);
+        return;
+      }
+
+      const selectedItems = compileSelectedItems();
+      console.log("Selected Items Payload:", selectedItems);
+
+      // Perform the attack
       const response = await axios.post("/api/letters", {
         selectedItems,
         userId: user._id,
       });
       dispatch(setUser(response.data.user));
+
+      // Change type to "attacks" after successful completion
       setTimeout(() => setType("attacks"), 1000);
-      // notify("Success: Letters have been generated and sent!", "success");
+      Swal.fire({
+        title: "Success!",
+        text: "Attacking Completed.",
+        icon: "success",
+      });
     } catch (error) {
-      notify("Error: The attack could not be completed.", "error");
+      console.log('The attack could not be completed.',error)
+       Swal.fire({
+         title: "Error!",
+         text: "The attack could not be completed.",
+         icon: "error",
+       });
+          
     } finally {
       setAttacking(false);
     }
   };
 
-  const compileSelectedItems = () => {
-    const selectedDisputes = filterSelectedItems(disputes, "disputes");
-    const selectedAccounts = filterSelectedItems(accounts, "accounts");
-    const selectedPersonalInfo = filterSelectedItems(
-      personalInfo,
-      "personalInfo"
-    );
 
-    const selectedInquiries = {
-      EQF: filterSelectedInquiries("EQF"),
-      EXP: filterSelectedInquiries("EXP"),
-      TUC: filterSelectedInquiries("TUC"),
-    };
+ const compileSelectedItems = () => {
+   const selectedDisputes = filterSelectedItems(
+     checkboxStates.disputes,
+     "disputes"
+   );
+   const selectedAccounts = filterSelectedItems(
+     checkboxStates.accounts,
+     "accounts"
+   );
+   const selectedPersonalInfo = filterSelectedItems(
+     checkboxStates.personalInfo,
+     "personalInfo"
+   );
 
-    console.log("Selected Inquiries:", selectedInquiries);
-    return {
-      disputes: selectedDisputes,
-      accounts: selectedAccounts,
-      inquiries: selectedInquiries,
-      personalInfo: selectedPersonalInfo,
-    };
-  };
+   const selectedInquiries = {
+     EQF: filterSelectedInquiries("EQF"),
+     EXP: filterSelectedInquiries("EXP"),
+     TUC: filterSelectedInquiries("TUC"),
+   };
 
-  const filterSelectedItems = (items, type) =>
-    items.filter((_, index) =>
-      ["EQF", "EXP", "TUC"].some(
-        (bureau) => checkboxStates[type][index][bureau]
-      )
-    );
-  const filterSelectedInquiries = (bureau) => {
-    const bureauNameMap = {
-      EQF: "Equifax",
-      EXP: "Experian",
-      TUC: "TransUnion",
-    };
+   console.log("Selected Inquiries:", selectedInquiries);
+   return {
+     disputes: selectedDisputes,
+     accounts: selectedAccounts,
+     inquiries: selectedInquiries,
+     personalInfo: selectedPersonalInfo,
+   };
+ };
 
-    const bureauName = bureauNameMap[bureau];
-    if (!checkboxStates.inquiries[bureau]) return [];
-
-    // Filter inquiries to only include those for the current bureau
-    const bureauInquiries = inquiries.filter(
-      (inquiry) => inquiry.data.credit_bereau === bureauName
-    );
-
-    return bureauInquiries.filter((inquiry, index) => {
-      const isSelected = checkboxStates.inquiries[bureau][index];
-      console.log(
-        `Filtering ${bureauName} - Index: ${index}, Selected: ${isSelected}`
-      );
-      return isSelected;
+  const filterSelectedItems = (items, type) => {
+    const selectedItems = [];
+    Object.entries(items).forEach(([key, value]) => {
+      if (type === "accounts") {
+        // For accounts, we need to check each status
+        Object.entries(value).forEach(([index, bureaus]) => {
+          if (Object.values(bureaus).some(Boolean)) {
+            selectedItems.push({ ...value[index], status: key });
+          }
+        });
+      } else {
+        // For other types (disputes, personalInfo)
+        if (Object.values(value).some(Boolean)) {
+          selectedItems.push(value);
+        }
+      }
     });
+    return selectedItems;
+  };
+  const filterSelectedInquiries = (bureau) => {
+    return checkboxStates.inquiries[bureau]
+      .map((isSelected, index) => (isSelected ? inquiries[index] : null))
+      .filter(Boolean);
   };
 
-  const isAnyCheckboxSelected = () =>
-    ["disputes", "accounts", "personalInfo"].some((type) =>
-      checkboxStates[type].some((checkboxes) =>
-        Object.values(checkboxes).some(Boolean)
-      )
-    ) ||
-    ["EQF", "EXP", "TUC"].some((bureau) =>
-      checkboxStates.inquiries[bureau].some(Boolean)
-    );
+ const isAnyCheckboxSelected = () => {
+   // Check disputes
+   if (
+     Object.values(checkboxStates.disputes).some((dispute) =>
+       Object.values(dispute).some(Boolean)
+     )
+   )
+     return true;
+
+   // Check accounts
+   if (
+     Object.values(checkboxStates.accounts).some((accountType) =>
+       Object.values(accountType).some((account) =>
+         Object.values(account).some(Boolean)
+       )
+     )
+   )
+     return true;
+
+   // Check inquiries
+   if (
+     Object.values(checkboxStates.inquiries).some((bureau) =>
+       bureau.some(Boolean)
+     )
+   )
+     return true;
+
+   // Check personalInfo
+   if (
+     Object.values(checkboxStates.personalInfo).some((info) =>
+       Object.values(info).some(Boolean)
+     )
+   )
+     return true;
+
+   return false;
+ };
+
 
   return (
     <>
@@ -502,43 +555,50 @@ useEffect(() => {
   setPersonalInfo(userPersonalInfo);
 
   const newCheckboxState = {
-    disputes: negatives.map(() => ({
-      EQF: false,
-      EXP: false,
-      TUC: false,
-    })),
+    disputes: negatives.reduce((acc, _, index) => {
+      acc[index] = { EQF: false, EXP: false, TUC: false };
+      return acc;
+    }, {}),
     accounts: Object.keys(categorizedAccounts).reduce((acc, status) => {
-      acc[status] = categorizedAccounts[status].map(() => ({
-        EQF: false,
-        EXP: false,
-        TUC: false,
-      }));
+      acc[status] = categorizedAccounts[status].reduce(
+        (statusAcc, _, index) => {
+          statusAcc[index] = { EQF: false, EXP: false, TUC: false };
+          return statusAcc;
+        },
+        {}
+      );
       return acc;
     }, {}),
     inquiries: {
-      EQF: filteredInquiries
-        .filter((inquiry) => inquiry.data.credit_bereau === "Equifax")
-        .map(() => false),
-      EXP: filteredInquiries
-        .filter((inquiry) => inquiry.data.credit_bereau === "Experian")
-        .map(() => false),
-      TUC: filteredInquiries
-        .filter((inquiry) => inquiry.data.credit_bereau === "TransUnion")
-        .map(() => false),
+      EQF: Array(
+        filteredInquiries.filter((i) => i.data.credit_bereau === "Equifax")
+          .length
+      ).fill(false),
+      EXP: Array(
+        filteredInquiries.filter((i) => i.data.credit_bereau === "Experian")
+          .length
+      ).fill(false),
+      TUC: Array(
+        filteredInquiries.filter((i) => i.data.credit_bereau === "TransUnion")
+          .length
+      ).fill(false),
     },
-    personalInfo: userPersonalInfo.map(() => ({
-      EQF: false,
-      EXP: false,
-      TUC: false,
-    })),
+    personalInfo: userPersonalInfo.reduce((acc, _, index) => {
+      acc[index] = { EQF: false, EXP: false, TUC: false };
+      return acc;
+    }, {}),
   };
 
-  setCheckboxStates((prevState) => ({
-    ...prevState,
-    ...newCheckboxState,
-  }));
+  setCheckboxStates(newCheckboxState);
 
-  console.log("Initialized Checkbox States:", newCheckboxState);
+
+  // setCheckboxStates((prevState) => ({
+  //   ...prevState,
+  //   ...newCheckboxState,
+  // }));
+
+  console.log("Current checkbox states:", checkboxStates);
+
 }, [user]);
 
 
@@ -602,21 +662,29 @@ useEffect(() => {
     }));
   };
 
-  const handleCheckboxChange = (type, index, bureau) => {
+  const handleCheckboxChange = (type, index, bureau, status = null) => {
     setCheckboxStates((prevState) => {
-      let newState = { ...prevState };
+      let newState = JSON.parse(JSON.stringify(prevState)); // Deep clone the state
       if (type === "inquiries") {
         newState[type][bureau][index] = !newState[type][bureau][index];
+      } else if (type === "accounts") {
+        if (status) {
+          newState[type][status][index][bureau] =
+            !newState[type][status][index][bureau];
+        }
       } else {
-        newState[type] = prevState[type].map((checkboxes, i) =>
-          i === index
-            ? { ...checkboxes, [bureau]: !checkboxes[bureau] }
-            : checkboxes
-        );
+        if (!newState[type][index]) {
+          newState[type][index] = {};
+        }
+        newState[type][index][bureau] = !newState[type][index][bureau];
       }
+      console.log("Updated State:", newState);
       return newState;
     });
   };
+
+
+
 
   const bureauInquiries = {
     EQF: inquiries.filter(
@@ -1026,6 +1094,7 @@ useEffect(() => {
                           checkboxStates={checkboxStates}
                           customMessage={customMessages[infoIndex]}
                           onCustomMessageChange={handleCustomMessageChange}
+                          status={status}
                         />
                       )}
                       {account.details.EXP?.length > 0 && (
@@ -1037,6 +1106,7 @@ useEffect(() => {
                           checkboxStates={checkboxStates}
                           customMessage={customMessages[infoIndex]}
                           onCustomMessageChange={handleCustomMessageChange}
+                          status={status}
                         />
                       )}
                       {account.details.TUC?.length > 0 && (
@@ -1048,6 +1118,7 @@ useEffect(() => {
                           checkboxStates={checkboxStates}
                           customMessage={customMessages[infoIndex]}
                           onCustomMessageChange={handleCustomMessageChange}
+                          status={status}
                         />
                       )}
                     </Stack>
@@ -1358,6 +1429,7 @@ function AccountDetails({
   checkboxStates,
   onCustomMessageChange,
   customMessage,
+  status,
 }) {
   const displayDetails = details.map((detail, index) => (
     <Typography
@@ -1384,9 +1456,11 @@ function AccountDetails({
           >
             <Checkbox
               checked={
-                checkboxStates?.["accounts"]?.[infoIndex]?.[bureau] || false
+                !!checkboxStates?.accounts?.[status]?.[infoIndex]?.[bureau]
               }
-              onChange={() => onCheckboxChange("accounts", infoIndex, bureau)}
+              onChange={() =>
+                onCheckboxChange("accounts", infoIndex, bureau, status)
+              }
               sx={{
                 color: "#FF9D43",
                 "&.Mui-checked": {
@@ -1443,7 +1517,9 @@ function InquiryBox({
             alignItems="center"
           >
             <Checkbox
-              checked={isChecked}
+              checked={
+                checkboxStates?.inquiries?.[bureau]?.[infoIndex] || false
+              }
               onChange={() => onCheckboxChange("inquiries", infoIndex, bureau)}
               sx={{
                 color: "#FF9D43",
@@ -1509,7 +1585,10 @@ function PersonalInfoBox({
                   alignItems="center"
                 >
                   <Checkbox
-                    checked={isChecked}
+                    checked={
+                      checkboxStates?.personalInfo?.[infoIndex]?.[bureau] ||
+                      false
+                    }
                     onChange={() =>
                       onCheckboxChange("personalInfo", infoIndex, bureau)
                     }

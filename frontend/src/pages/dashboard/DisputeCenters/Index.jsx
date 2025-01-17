@@ -108,47 +108,45 @@ export default function DisputeCenters() {
         icon: "success",
       });
     } catch (error) {
-      console.log('The attack could not be completed.',error)
-       Swal.fire({
-         title: "Error!",
-         text: "The attack could not be completed.",
-         icon: "error",
-       });
-          
+      console.log("The attack could not be completed.", error);
+      Swal.fire({
+        title: "Error!",
+        text: "The attack could not be completed.",
+        icon: "error",
+      });
     } finally {
       setAttacking(false);
     }
   };
 
+  const compileSelectedItems = () => {
+    const selectedDisputes = filterSelectedItems(
+      checkboxStates.disputes,
+      "disputes"
+    );
+    const selectedAccounts = filterSelectedItems(
+      checkboxStates.accounts,
+      "accounts"
+    );
+    const selectedPersonalInfo = filterSelectedItems(
+      checkboxStates.personalInfo,
+      "personalInfo"
+    );
 
- const compileSelectedItems = () => {
-   const selectedDisputes = filterSelectedItems(
-     checkboxStates.disputes,
-     "disputes"
-   );
-   const selectedAccounts = filterSelectedItems(
-     checkboxStates.accounts,
-     "accounts"
-   );
-   const selectedPersonalInfo = filterSelectedItems(
-     checkboxStates.personalInfo,
-     "personalInfo"
-   );
+    const selectedInquiries = {
+      EQF: filterSelectedInquiries("EQF"),
+      EXP: filterSelectedInquiries("EXP"),
+      TUC: filterSelectedInquiries("TUC"),
+    };
 
-   const selectedInquiries = {
-     EQF: filterSelectedInquiries("EQF"),
-     EXP: filterSelectedInquiries("EXP"),
-     TUC: filterSelectedInquiries("TUC"),
-   };
-
-   console.log("Selected Inquiries:", selectedInquiries);
-   return {
-     disputes: selectedDisputes,
-     accounts: selectedAccounts,
-     inquiries: selectedInquiries,
-     personalInfo: selectedPersonalInfo,
-   };
- };
+    console.log("Selected Inquiries:", selectedInquiries);
+    return {
+      disputes: selectedDisputes,
+      accounts: selectedAccounts,
+      inquiries: selectedInquiries,
+      personalInfo: selectedPersonalInfo,
+    };
+  };
 
   const filterSelectedItems = (items, type) => {
     const selectedItems = [];
@@ -175,44 +173,43 @@ export default function DisputeCenters() {
       .filter(Boolean);
   };
 
- const isAnyCheckboxSelected = () => {
-   // Check disputes
-   if (
-     Object.values(checkboxStates.disputes).some((dispute) =>
-       Object.values(dispute).some(Boolean)
-     )
-   )
-     return true;
+  const isAnyCheckboxSelected = () => {
+    // Check disputes
+    if (
+      Object.values(checkboxStates.disputes).some((dispute) =>
+        Object.values(dispute).some(Boolean)
+      )
+    )
+      return true;
 
-   // Check accounts
-   if (
-     Object.values(checkboxStates.accounts).some((accountType) =>
-       Object.values(accountType).some((account) =>
-         Object.values(account).some(Boolean)
-       )
-     )
-   )
-     return true;
+    // Check accounts
+    if (
+      Object.values(checkboxStates.accounts).some((accountType) =>
+        Object.values(accountType).some((account) =>
+          Object.values(account).some(Boolean)
+        )
+      )
+    )
+      return true;
 
-   // Check inquiries
-   if (
-     Object.values(checkboxStates.inquiries).some((bureau) =>
-       bureau.some(Boolean)
-     )
-   )
-     return true;
+    // Check inquiries
+    if (
+      Object.values(checkboxStates.inquiries).some((bureau) =>
+        bureau.some(Boolean)
+      )
+    )
+      return true;
 
-   // Check personalInfo
-   if (
-     Object.values(checkboxStates.personalInfo).some((info) =>
-       Object.values(info).some(Boolean)
-     )
-   )
-     return true;
+    // Check personalInfo
+    if (
+      Object.values(checkboxStates.personalInfo).some((info) =>
+        Object.values(info).some(Boolean)
+      )
+    )
+      return true;
 
-   return false;
- };
-
+    return false;
+  };
 
   return (
     <>
@@ -362,8 +359,7 @@ const queryAccount = (user) => {
   const categorizedAccounts = {
     "Collection/Chargeoff": [],
     Late: [],
-    Current: [],
-    Other: [],
+    Repossesion: [],
   };
 
   const accountHistory =
@@ -375,7 +371,7 @@ const queryAccount = (user) => {
       TUC: {},
     };
 
-    let paymentStatus = "Other";
+    let paymentStatus = null;
 
     account.accountDetails.forEach((detail) => {
       if (detail.label === "Payment Status:") {
@@ -391,30 +387,12 @@ const queryAccount = (user) => {
         ) {
           paymentStatus = "Late";
         } else if (
-          statuses.every((status) => status.toLowerCase().includes("current"))
-        ) {
-          paymentStatus = "Current";
-        } else if (
-          statuses.every((status) => status.toLowerCase().includes("Paid")) ||
-          statuses.every((status) => status.toLowerCase().includes("Pays")) ||
-          statuses.every((status) => status.toLowerCase().includes("Paying"))
-        ) {
-          paymentStatus = "Paying / Paid";
-        } else if (
           statuses.every((status) =>
-            status.toLowerCase().includes("Wage Earner Plan")
+            status.toLowerCase().includes("repossesion")
           )
         ) {
-          paymentStatus = "Wage Earner Plan";
-        
-        } else if (
-          statuses.every((status) =>
-            status.toLowerCase().includes("repossession")
-          )
-        ) {
-          paymentStatus = "Repossession";
+          paymentStatus = "Repossesion";
         }
-        
       }
 
       if (detail.data.EQF)
@@ -425,7 +403,7 @@ const queryAccount = (user) => {
         structuredAccountDetails.TUC[detail.label] = detail.data.TUC;
     });
 
-    categorizedAccounts[paymentStatus].push({
+    categorizedAccounts[paymentStatus]?.push({
       accountName: account.accountName,
       details: flattenDetails(structuredAccountDetails),
     });
@@ -433,7 +411,6 @@ const queryAccount = (user) => {
 
   return categorizedAccounts;
 };
-
 
 const identifyNegativeItems = (user) => {
   const negatives = [];
@@ -513,96 +490,91 @@ function Disputes({
   const user = useSelector((state) => state.user.details);
   const [customMessages, setCustomMessages] = useState({});
 
-useEffect(() => {
-  if (!user?.creditReport[0]?.creditReportData) return;
+  useEffect(() => {
+    if (!user?.creditReport[0]?.creditReportData) return;
 
-  const { negatives, messageState } = identifyNegativeItems(user);
-  const accountHistory =
-    user?.creditReport[0]?.creditReportData?.account_history || [];
-  const categorizedAccounts = queryAccount(user);
+    const { negatives, messageState } = identifyNegativeItems(user);
+    const accountHistory =
+      user?.creditReport[0]?.creditReportData?.account_history || [];
+    const categorizedAccounts = queryAccount(user);
 
-  setDisputes(negatives);
-  setAccounts(categorizedAccounts);
-  setCustomMessages(messageState);
+    setDisputes(negatives);
+    setAccounts(categorizedAccounts);
+    setCustomMessages(messageState);
 
-  // Filter inquiries based on account history conditions
-  const userInquiries =
-    user?.creditReport[0]?.creditReportData?.inquiries || [];
-  const filteredInquiries = userInquiries.filter((inquiry) => {
-    const creditorName = inquiry.creditor_name;
-    console.log("Checking inquiry for creditor:", creditorName);
-    return !accountHistory.some((account) => {
-      if (account.accountName.toLowerCase() === creditorName.toLowerCase()) {
-        console.log("Matching account found:", account.accountName);
-        return account.accountDetails.some((detail) => {
-          if (detail.label === "Account Status:") {
-            console.log("Account Status for", creditorName, ":", detail.data);
-            return ["EQF", "EXP", "TUC"].every(
-              (bureau) => detail.data[bureau]?.toLowerCase() === "open"
-            );
-          }
-          return false;
-        });
-      }
-      return false;
+    // Filter inquiries based on account history conditions
+    const userInquiries =
+      user?.creditReport[0]?.creditReportData?.inquiries || [];
+    const filteredInquiries = userInquiries.filter((inquiry) => {
+      const creditorName = inquiry.creditor_name;
+      console.log("Checking inquiry for creditor:", creditorName);
+      return !accountHistory.some((account) => {
+        if (account.accountName.toLowerCase() === creditorName.toLowerCase()) {
+          console.log("Matching account found:", account.accountName);
+          return account.accountDetails.some((detail) => {
+            if (detail.label === "Account Status:") {
+              console.log("Account Status for", creditorName, ":", detail.data);
+              return ["EQF", "EXP", "TUC"].every(
+                (bureau) => detail.data[bureau]?.toLowerCase() === "open"
+              );
+            }
+            return false;
+          });
+        }
+        return false;
+      });
     });
-  });
 
-  setInquiries(filteredInquiries);
+    setInquiries(filteredInquiries);
 
-  const userPersonalInfo =
-    user.creditReport[0].creditReportData.personal_information || [];
-  setPersonalInfo(userPersonalInfo);
+    const userPersonalInfo =
+      user.creditReport[0].creditReportData.personal_information || [];
+    setPersonalInfo(userPersonalInfo);
 
-  const newCheckboxState = {
-    disputes: negatives.reduce((acc, _, index) => {
-      acc[index] = { EQF: false, EXP: false, TUC: false };
-      return acc;
-    }, {}),
-    accounts: Object.keys(categorizedAccounts).reduce((acc, status) => {
-      acc[status] = categorizedAccounts[status].reduce(
-        (statusAcc, _, index) => {
-          statusAcc[index] = { EQF: false, EXP: false, TUC: false };
-          return statusAcc;
-        },
-        {}
-      );
-      return acc;
-    }, {}),
-    inquiries: {
-      EQF: Array(
-        filteredInquiries.filter((i) => i.data.credit_bereau === "Equifax")
-          .length
-      ).fill(false),
-      EXP: Array(
-        filteredInquiries.filter((i) => i.data.credit_bereau === "Experian")
-          .length
-      ).fill(false),
-      TUC: Array(
-        filteredInquiries.filter((i) => i.data.credit_bereau === "TransUnion")
-          .length
-      ).fill(false),
-    },
-    personalInfo: userPersonalInfo.reduce((acc, _, index) => {
-      acc[index] = { EQF: false, EXP: false, TUC: false };
-      return acc;
-    }, {}),
-  };
+    const newCheckboxState = {
+      disputes: negatives.reduce((acc, _, index) => {
+        acc[index] = { EQF: false, EXP: false, TUC: false };
+        return acc;
+      }, {}),
+      accounts: Object.keys(categorizedAccounts).reduce((acc, status) => {
+        acc[status] = categorizedAccounts[status].reduce(
+          (statusAcc, _, index) => {
+            statusAcc[index] = { EQF: false, EXP: false, TUC: false };
+            return statusAcc;
+          },
+          {}
+        );
+        return acc;
+      }, {}),
+      inquiries: {
+        EQF: Array(
+          filteredInquiries.filter((i) => i.data.credit_bereau === "Equifax")
+            .length
+        ).fill(false),
+        EXP: Array(
+          filteredInquiries.filter((i) => i.data.credit_bereau === "Experian")
+            .length
+        ).fill(false),
+        TUC: Array(
+          filteredInquiries.filter((i) => i.data.credit_bereau === "TransUnion")
+            .length
+        ).fill(false),
+      },
+      personalInfo: userPersonalInfo.reduce((acc, _, index) => {
+        acc[index] = { EQF: false, EXP: false, TUC: false };
+        return acc;
+      }, {}),
+    };
 
-  setCheckboxStates(newCheckboxState);
+    setCheckboxStates(newCheckboxState);
 
+    // setCheckboxStates((prevState) => ({
+    //   ...prevState,
+    //   ...newCheckboxState,
+    // }));
 
-  // setCheckboxStates((prevState) => ({
-  //   ...prevState,
-  //   ...newCheckboxState,
-  // }));
-
-  console.log("Current checkbox states:", checkboxStates);
-
-}, [user]);
-
-
-
+    console.log("Current checkbox states:", checkboxStates);
+  }, [user]);
 
   // Filter out personal info entries that have "-" for all bureaus
   const filteredPersonalInfo = personalInfo.filter((info) =>
@@ -683,9 +655,6 @@ useEffect(() => {
     });
   };
 
-
-
-
   const bureauInquiries = {
     EQF: inquiries.filter(
       (inquiry) => inquiry.data.credit_bereau === "Equifax"
@@ -720,12 +689,17 @@ useEffect(() => {
               // Check if the info label is one of the specified labels
               const displayLabels = [
                 "Name:",
+                "Name",
                 "Date of Birth:",
+                "Date of Birth",
                 "Current Address(es):",
+                "Current Address",
               ];
               if (!displayLabels.includes(info.label)) {
                 return null; // Skip rendering if the label is not in the display list
               }
+
+           
 
               return (
                 <Stack direction="row" spacing={2} key={infoIndex}>
@@ -753,7 +727,7 @@ useEffect(() => {
 
             <Box p={2} bgcolor="#FF9D43" mb={5}>
               <Text fs="20px" fw="700" color="#131C30" mb={2}>
-                Public Information
+                Public Records
               </Text>
             </Box>
             <Stack direction="row" spacing={2} alignItems="center">
@@ -973,7 +947,7 @@ useEffect(() => {
         spacing={{ sm: 4, xs: 1 }}
         sx={{ overflow: "hidden", overflowX: "auto" }}
       >
-        {accounts.length > 0 && (
+        {/* {accounts.length > 0 && (
           <>
             <Box p={2} bgcolor="#FF9D43" mt={10} mb={5}>
               <Text fs="20px" fw="700" color="#131C30" mb={2}>
@@ -1064,7 +1038,7 @@ useEffect(() => {
               </Text>
             </Stack>
           </>
-        )}
+        )} */}
         {Object.entries(accounts).map(
           ([status, accountList]) =>
             accountList.length > 0 && (
@@ -1557,7 +1531,14 @@ function PersonalInfoBox({
   const { label, data } = personalInfo;
 
   // Define the labels you want to display
-  const displayLabels = ["Name:", "Date of Birth:", "Current Address(es):"];
+  const displayLabels = [
+    "Name:",
+    "Name",
+    "Date of Birth:",
+    "Date of Birth",
+    "Current Address(es):",
+    "Current Address",
+  ];
 
   // Check if the current label should be displayed
   if (!displayLabels.includes(label)) {

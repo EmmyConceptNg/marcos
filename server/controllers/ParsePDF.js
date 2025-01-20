@@ -123,8 +123,11 @@ const parsePersonalInformation = (line, section) => {
     "Former",
     "Date of Birth",
     "Current Address(es)",
+    "Current Address",
     "Previous Address(es)",
+    "Previous Address",
     "Employers",
+    "Employer",
   ];
 
   fields.forEach((field) => {

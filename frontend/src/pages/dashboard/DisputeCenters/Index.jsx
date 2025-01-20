@@ -690,10 +690,14 @@ function Disputes({
               const displayLabels = [
                 "Name:",
                 "Name",
+                'Also Known As',
+                'Also Known As:',
                 "Date of Birth:",
                 "Date of Birth",
                 "Current Address(es):",
                 "Current Address",
+                'Previous Address',
+                'Previous Address(es):',
               ];
               if (!displayLabels.includes(info.label)) {
                 return null; // Skip rendering if the label is not in the display list
@@ -1534,10 +1538,14 @@ function PersonalInfoBox({
   const displayLabels = [
     "Name:",
     "Name",
+    'Also Known As',
+    'Also Known As:',
     "Date of Birth:",
     "Date of Birth",
     "Current Address(es):",
     "Current Address",
+    'Previous Address',
+    'Previous Address(es):',
   ];
 
   // Check if the current label should be displayed

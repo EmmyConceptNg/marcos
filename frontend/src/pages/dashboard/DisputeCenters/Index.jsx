@@ -387,7 +387,7 @@ const queryAccount = (user) => {
         ) {
           paymentStatus = "Late";
         } else if (
-          statuses.every((status) =>
+          statuses.some((status) =>
             status.toLowerCase().includes("repossesion")
           )
         ) {

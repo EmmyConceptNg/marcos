@@ -696,7 +696,9 @@ function Disputes({
                 "Date of Birth",
                 "Current Address(es):",
                 "Current Address",
+                "Current Address:",
                 'Previous Address',
+                'Previous Address:',
                 'Previous Address(es):',
               ];
               if (!displayLabels.includes(info.label)) {
@@ -1544,7 +1546,9 @@ function PersonalInfoBox({
     "Date of Birth",
     "Current Address(es):",
     "Current Address",
+    "Current Address:",
     'Previous Address',
+    'Previous Address:',
     'Previous Address(es):',
   ];
 

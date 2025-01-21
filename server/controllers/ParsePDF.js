@@ -327,6 +327,7 @@ const parseAccountHistory = (
     "Comments:",
     "Date Last Active:",
     "Date of Last Payment:",
+    "Creditor Remarks:",
   ];
 
   if (line.includes("Account #:") || line.includes("Account #")) {

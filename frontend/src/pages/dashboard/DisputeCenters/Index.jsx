@@ -359,11 +359,13 @@ const queryAccount = (user) => {
   const categorizedAccounts = {
     "Collection/Chargeoff": [],
     Late: [],
+    Collection: [],
     Repossesion: [],
   };
 
   const accountHistory =
     user?.creditReport[0]?.creditReportData?.account_history || [];
+
   accountHistory.forEach((account) => {
     const structuredAccountDetails = {
       EQF: {},
@@ -372,10 +374,12 @@ const queryAccount = (user) => {
     };
 
     let paymentStatus = null;
+    let statuses = [];
 
+    // First pass: Extract "Payment Status:"
     account.accountDetails.forEach((detail) => {
       if (detail.label === "Payment Status:") {
-        const statuses = [detail.data.EQF, detail.data.EXP, detail.data.TUC];
+        statuses = [detail.data.EQF, detail.data.EXP, detail.data.TUC];
         if (
           statuses.some((status) =>
             status.toLowerCase().includes("collection/chargeoff")
@@ -394,7 +398,51 @@ const queryAccount = (user) => {
           paymentStatus = "Repossesion";
         }
       }
+    });
 
+    // Second pass: Process "Account Type:" after statuses have been populated
+    account.accountDetails.forEach((detail) => {
+      if (detail.label === "Account Type:") {
+        const accountType = [detail.data.EQF, detail.data.EXP, detail.data.TUC];
+        console.log("statuses", statuses); // Should now contain the values from previous loop
+
+        if (
+          accountType.some((account) =>
+            account.toLowerCase().includes("collection")
+          ) &&
+          statuses.some((status) => status.toLowerCase().includes("late"))
+        ) {
+          paymentStatus = "Collection";
+        }
+      }
+    });
+
+    // Third pass: Process "Creditor Remarks:" after statuses have been populated
+    account.accountDetails.forEach((detail) => {
+      if (detail.label === "Creditor Remarks:") {
+        
+        const creditorRemarks = [
+          detail.data.EQF,
+          detail.data.EXP,
+          detail.data.TUC,
+        ];
+
+        if (
+          creditorRemarks.some((remark) =>
+            remark.toLowerCase().includes("placed for collection")
+          ) &&
+          statuses.some((status) =>
+            status.toLowerCase().includes("collection/chargeoff")
+          )
+        ) {
+          
+          paymentStatus = "Collection";
+        }
+      }
+    });
+
+    // Collect all account details
+    account.accountDetails.forEach((detail) => {
       if (detail.data.EQF)
         structuredAccountDetails.EQF[detail.label] = detail.data.EQF;
       if (detail.data.EXP)
@@ -411,6 +459,8 @@ const queryAccount = (user) => {
 
   return categorizedAccounts;
 };
+
+
 
 const identifyNegativeItems = (user) => {
   const negatives = [];
@@ -635,25 +685,44 @@ function Disputes({
   };
 
   const handleCheckboxChange = (type, index, bureau, status = null) => {
-    setCheckboxStates((prevState) => {
-      let newState = JSON.parse(JSON.stringify(prevState)); // Deep clone the state
-      if (type === "inquiries") {
-        newState[type][bureau][index] = !newState[type][bureau][index];
-      } else if (type === "accounts") {
-        if (status) {
-          newState[type][status][index][bureau] =
-            !newState[type][status][index][bureau];
+  setCheckboxStates(prevState => {
+    if (type === "inquiries") {
+      return {
+        ...prevState,
+        [type]: {
+          ...prevState[type],
+          [bureau]: prevState[type][bureau].map((val, idx) => idx === index ? !val : val)
         }
-      } else {
-        if (!newState[type][index]) {
-          newState[type][index] = {};
+      };
+    } else if (type === "accounts" && status) {
+      return {
+        ...prevState,
+        [type]: {
+          ...prevState[type],
+          [status]: {
+            ...prevState[type][status],
+            [index]: {
+              ...prevState[type][status][index],
+              [bureau]: !prevState[type][status][index][bureau]
+            }
+          }
         }
-        newState[type][index][bureau] = !newState[type][index][bureau];
-      }
-      console.log("Updated State:", newState);
-      return newState;
-    });
-  };
+      };
+    } else {
+      return {
+        ...prevState,
+        [type]: {
+          ...prevState[type],
+          [index]: {
+            ...prevState[type][index],
+            [bureau]: !prevState[type][index]?.[bureau]
+          }
+        }
+      };
+    }
+  });
+};
+
 
   const bureauInquiries = {
     EQF: inquiries.filter(
@@ -690,22 +759,20 @@ function Disputes({
               const displayLabels = [
                 "Name:",
                 "Name",
-                'Also Known As',
-                'Also Known As:',
+                "Also Known As",
+                "Also Known As:",
                 "Date of Birth:",
                 "Date of Birth",
                 "Current Address(es):",
                 "Current Address",
                 "Current Address:",
-                'Previous Address',
-                'Previous Address:',
-                'Previous Address(es):',
+                "Previous Address",
+                "Previous Address:",
+                "Previous Address(es):",
               ];
               if (!displayLabels.includes(info.label)) {
                 return null; // Skip rendering if the label is not in the display list
               }
-
-           
 
               return (
                 <Stack direction="row" spacing={2} key={infoIndex}>
@@ -736,92 +803,7 @@ function Disputes({
                 Public Records
               </Text>
             </Box>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Checkbox
-                onChange={(e) =>
-                  handleSelectAllCheckbox("disputes", e.target.checked)
-                }
-                checked={checkboxStates.disputes?.every(
-                  (checkboxes) =>
-                    checkboxes.EQF && checkboxes.EXP && checkboxes.TUC
-                )}
-                sx={{
-                  color: "#FF9D43",
-                  "&.Mui-checked": {
-                    color: "#FF9D43",
-                  },
-                }}
-              />
-              <Text fs="20px" fw="550" color="#131C30" mb={2}>
-                Select All
-              </Text>
-
-              <Checkbox
-                onChange={(e) =>
-                  handleSelectAllBureauCheckbox(
-                    "disputes",
-                    e.target.checked,
-                    "EQF"
-                  )
-                }
-                checked={checkboxStates.disputes?.every(
-                  (checkboxes) => checkboxes.EQF
-                )}
-                sx={{
-                  color: "#FF9D43",
-                  "&.Mui-checked": {
-                    color: "#FF9D43",
-                  },
-                }}
-              />
-              <Text fs="20px" fw="550" color="#131C30" mb={2}>
-                Equifax
-              </Text>
-
-              <Checkbox
-                onChange={(e) =>
-                  handleSelectAllBureauCheckbox(
-                    "disputes",
-                    e.target.checked,
-                    "EXP"
-                  )
-                }
-                checked={checkboxStates.disputes?.every(
-                  (checkboxes) => checkboxes.EXP
-                )}
-                sx={{
-                  color: "#FF9D43",
-                  "&.Mui-checked": {
-                    color: "#FF9D43",
-                  },
-                }}
-              />
-              <Text fs="20px" fw="550" color="#131C30" mb={2}>
-                Experian
-              </Text>
-
-              <Checkbox
-                onChange={(e) =>
-                  handleSelectAllBureauCheckbox(
-                    "disputes",
-                    e.target.checked,
-                    "TUC"
-                  )
-                }
-                checked={checkboxStates.disputes?.every(
-                  (checkboxes) => checkboxes.TUC
-                )}
-                sx={{
-                  color: "#FF9D43",
-                  "&.Mui-checked": {
-                    color: "#FF9D43",
-                  },
-                }}
-              />
-              <Text fs="20px" fw="550" color="#131C30" mb={2}>
-                TransUnion
-              </Text>
-            </Stack>
+            
           </>
         )}
         {disputes.map((dispute, infoIndex) => (

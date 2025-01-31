@@ -565,7 +565,7 @@ function Disputes({
             if (detail.label === "Account Status:") {
               console.log("Account Status for", creditorName, ":", detail.data);
               return ["EQF", "EXP", "TUC"].every(
-                (bureau) => detail.data[bureau]?.toLowerCase() === "open"
+                (bureau) => detail.data[bureau]?.toLowerCase() !== "open"
               );
             }
             return false;

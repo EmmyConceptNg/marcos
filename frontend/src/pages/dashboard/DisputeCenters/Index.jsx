@@ -357,7 +357,7 @@ const Loader = () => (
 
 const queryAccount = (user) => {
   const categorizedAccounts = {
-    "Collection/Chargeoff": [],
+    Chargeoff: [],
     Late: [],
     Collection: [],
     Repossesion: [],
@@ -385,7 +385,7 @@ const queryAccount = (user) => {
             status.toLowerCase().includes("collection/chargeoff")
           )
         ) {
-          paymentStatus = "Collection/Chargeoff";
+          paymentStatus = "Chargeoff";
         } else if (
           statuses.some((status) => status.toLowerCase().includes("late"))
         ) {

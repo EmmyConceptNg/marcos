@@ -552,30 +552,37 @@ function Disputes({
     setAccounts(categorizedAccounts);
     setCustomMessages(messageState);
 
+
+    const cleanCreditorName = (name) => 
+  name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
     // Filter inquiries based on account history conditions
     const userInquiries =
       user?.creditReport[0]?.creditReportData?.inquiries || [];
-    const filteredInquiries = userInquiries.filter((inquiry) => {
-      const creditorName = inquiry.creditor_name;
-      console.log("Checking inquiry for creditor:", creditorName);
-      return !accountHistory.some((account) => {
-        if (account.accountName.toLowerCase() === creditorName.toLowerCase()) {
-          console.log("Matching account found:", account.accountName);
-          return account.accountDetails.some((detail) => {
-            if (detail.label === "Account Status:") {
-              console.log("Account Status for", creditorName, ":", detail.data);
-              return ["EQF", "EXP", "TUC"].every(
-                (bureau) => detail.data[bureau]?.toLowerCase() === "open"
-              );
-            }
-            return false;
-          });
-        }
-        return false;
-      });
-    });
 
-    setInquiries(filteredInquiries);
+// Updated inquiry filter logic
+  const filteredInquiries = userInquiries.filter((inquiry) => {
+    const creditorName = inquiry.creditor_name;
+    return !accountHistory.some((account) => {
+      const cleanedAccount = cleanCreditorName(account.accountName);
+      const cleanedInquiry = cleanCreditorName(creditorName);
+      if (cleanedAccount === cleanedInquiry) {
+        return account.accountDetails.some((detail) => {
+          if (detail.label === "Account Status:") {
+            return ["EQF", "EXP", "TUC"].some(
+              (bureau) => detail.data[bureau]?.toLowerCase() === "open"
+            );
+          }
+          return false;
+        });
+      }
+      return false;
+    });
+  });
+
+  setInquiries(filteredInquiries);
+
+
 
     const userPersonalInfo =
       user.creditReport[0].creditReportData.personal_information || [];

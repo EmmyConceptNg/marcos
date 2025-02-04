@@ -26,7 +26,16 @@ export const parsePdfText = (pdfContent) => {
   let isNextLineVantage = false;
   let vantageCounter = 1;
 
+  let lineBuffer = [];
+  const bufferSize = 10; // Adjust buffer size as needed
+
   lines.forEach((line, index) => {
+
+     lineBuffer.push(line);
+    if (lineBuffer.length > bufferSize) {
+      lineBuffer.shift();
+    }
+    
     // Log the current processing line
     console.log(`Processing line ${index}: ${line}`);
 
@@ -89,7 +98,8 @@ export const parsePdfText = (pdfContent) => {
             line,
             data[currentSection],
             previousLine,
-            lineBeforePrevious
+            lineBeforePrevious,
+            lineBuffer
           );
           break;
         case "inquiries":
@@ -307,10 +317,12 @@ const parseAccountHistory = (
   line,
   section,
   previousLine,
-  lineBeforePrevious
+  lineBeforePrevious,
+  lineBuffer
 ) => {
   const fields = [
     "Account #:",
+    "Account #",
     "Account Type:",
     "Account Type - Detail:",
     "Bureau Code:",
@@ -330,19 +342,31 @@ const parseAccountHistory = (
     "Creditor Remarks:",
   ];
 
-  if (line.includes("Account #:") || line.includes("Account #")) {
-    const accountName =
-      lineBeforePrevious &&
-      !fields.some((field) => lineBeforePrevious.includes(field))
-        ? lineBeforePrevious.trim()
-        : "Unknown Account";
-    section.push({
-      accountName: accountName,
-      accountDetails: [],
-    });
-    console.log("Initialized new account:", accountName);
-  }
+ if (line.includes("Account #:") || line.includes("Account #")) {
+   let accountName = "Unknown Account";
+   // Iterate backward through the buffer to find the account name
+   for (let i = lineBuffer.length - 2; i >= 0; i--) {
+     // Skip current line
+     const candidate = lineBuffer[i];
+     const isHeader =
+       candidate.includes("Transunion®") &&
+       candidate.includes("Experian®") &&
+       candidate.includes("Equifax®");
+     const isUrl = candidate.startsWith("http") || candidate.includes("www.");
+     const isDate = /\d{1,2}\/\d{1,2}\/\d{2,4}/.test(candidate);
+     const isField = fields.some((field) => candidate.includes(field));
 
+     if (!isHeader && !isUrl && !isDate && !isField) {
+       accountName = candidate.trim();
+       break;
+     }
+   }
+   section.push({
+     accountName: accountName,
+     accountDetails: [],
+   });
+   console.log("Initialized new account:", accountName);
+ }
   const currentAccount = section[section.length - 1];
 
   if (!currentAccount) {

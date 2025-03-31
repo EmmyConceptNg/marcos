@@ -566,9 +566,9 @@ function Disputes({
     return !accountHistory.some((account) => {
       const cleanedAccount = cleanCreditorName(account.accountName);
       const cleanedInquiry = cleanCreditorName(creditorName);
-      if (cleanedAccount === cleanedInquiry) {
+      if (cleanedAccount.replace(/\s/g, '').includes(cleanedInquiry.replace(/\s/g, ''))){
         return account.accountDetails.some((detail) => {
-          if (detail.label === "Account Status:" || (detail.label === "Account Status") {
+          if (detail.label === "Account Status:" || detail.label === "Account Status") {
             return ["EQF", "EXP", "TUC"].some(
               (bureau) => detail.data[bureau]?.toLowerCase() == "open"
             );

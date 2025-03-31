@@ -570,7 +570,7 @@ function Disputes({
         return account.accountDetails.some((detail) => {
           if (detail.label === "Account Status:") {
             return ["EQF", "EXP", "TUC"].some(
-              (bureau) => detail.data[bureau]?.toLowerCase() === "open"
+              (bureau) => detail.data[bureau]?.toLowerCase() == "open"
             );
           }
           return false;

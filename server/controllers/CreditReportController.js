@@ -62,6 +62,7 @@ export const uploadRecord = async (req, res) => {
     } else if (req.file.mimetype === "application/pdf") {
       // Convert PDF to text and process
       const textContent = await convertPdfToText(filePath);
+      console.log('text content: ',textContent)
       if (textContent) {
         result = await parsePdfAndStore(
           textContent,
@@ -139,7 +140,7 @@ const convertPdfToText = async (pdfPath) => {
     result = result.replace(/fransUnion/g, "TransUnion");
     result = result.replace(/Trans Union/g, "TransUnion");
 
-    // console.log("Converted PDF Text:", result); // Log the result for debugging
+    console.log("Converted PDF Text:", result); // Log the result for debugging
 
     return result; // Return the result string directly
   } catch (error) {
